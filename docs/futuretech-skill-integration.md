@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 平台 API | Agent、Run、Security、Audit、Runtime 状态 | `server/futuretechConsoleProxy.mjs` 的 `/futuretech-admin/*` |
 | 执行内核 | 会话、文件、终端、Skill、MCP、事件流 | FutureTech Runtime `4096` |
-| 业务 Skill | 文档解析、素材检索、写作、组装、审查 | Runtime `/skill` 返回的 Skill registry |
+| 业务 Skill | 文档解析、素材检索、写作、组装、审查 | Runtime `/skill` 与仓库内置 `skills/` 合并后的 Skill registry |
 | 前端工作台 | Agent 市场、Skill 市场、Run 追踪、设置页 | `src/App.jsx` |
 
 ## 本机接口
@@ -25,7 +25,7 @@ Vite 会把这些请求代理到 `5175`。
 | --- | --- | --- |
 | `GET` | `/futuretech-admin/agentos` | 返回 Agent、Run、Skill、Runtime、安全策略和审计汇总 |
 | `GET` | `/futuretech-admin/runtime-status` | 返回 Runtime / Proxy / Web 健康状态、模型、会话数、Skill 数 |
-| `GET` | `/futuretech-admin/skills` | 从 FutureTech Runtime 读取 Skill registry、分类和输入输出摘要 |
+| `GET` | `/futuretech-admin/skills` | 读取 Runtime Skill 与仓库内置 Skill，返回分类、输入输出摘要和来源标签 |
 | `GET` | `/futuretech-admin/agents` | 返回已配置 Agent |
 | `POST` | `/futuretech-admin/agents` | 新增或更新 Agent 身份配置 |
 | `POST` | `/futuretech-admin/agent-blueprints/from-skill` | 根据 Skill 生成可编辑 Agent 蓝图 |
@@ -124,6 +124,32 @@ curl -sS http://127.0.0.1:5174/futuretech-admin/agent-runs/<run-id>
 | `running` | Runtime 正在执行 |
 | `completed` | 执行完成，`exitCode` 为 `0` |
 | `failed` | 执行失败，查看 `events` 和 JSONL 日志 |
+
+合同提取 Run 只接受上传文件形式的 PDF。请求体中的 `inputs.files[]` 至少要包含一个 `field` 为 `pdf` 或文件名以 `.pdf` 结尾的条目；平台会把上传文件写入 `.runtime/uploads/<run-id>/`，再调用仓库内置 `skills/contract-e2e-excel/scripts/contract_pdf_to_excel.py`。
+
+成功后 `run.artifacts` 至少包含：
+
+| 类型 | 说明 |
+| --- | --- |
+| `runtime-log` | `.runtime/agentos-runs/<run-id>.jsonl` |
+| `excel` | 合同抽取结果 Excel |
+| `summary` | 抽取统计 JSON |
+| `json` | 结构化抽取结果 JSON |
+
+## 部署配置
+
+本机实现支持以下环境变量，企业后端替换时应保留同等语义：
+
+| 变量 | 默认值 | 作用 |
+| --- | --- | --- |
+| `FUTURETECH_CONSOLE_TARGET` | `http://127.0.0.1:4096` | Console Proxy 指向的 Runtime 地址 |
+| `FUTURETECH_CONSOLE_PROXY` | `http://127.0.0.1:5175` | 前端代理到的 Console Proxy 地址 |
+| `FUTURETECH_CONSOLE_PROXY_PORT` | `5175` | Console Proxy 监听端口 |
+| `FUTURETECH_WEB_MODE` | `dev` | `preview` 时使用构建后的前端 |
+| `FUTURETECH_RUNTIME_COMMAND` | `opencode` | Runtime CLI 启动命令 |
+| `FUTURETECH_PYTHON` | 自动选择 | Skill 脚本 Python |
+| `FUTURETECH_SKILL_ROOTS` | 空 | 额外 Skill 根目录 |
+| `FUTURETECH_CONTRACT_SKILL_ROOT` | `skills/contract-e2e-excel` | 合同 Skill 目录覆盖 |
 
 ## 生产后端建议
 

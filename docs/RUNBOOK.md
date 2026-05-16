@@ -4,11 +4,20 @@
 
 ## 启动与停止
 
+开发态启动：
+
 ```bash
 npm run start
 npm run status
 npm run stop
 npm run restart
+```
+
+部署态启动会先构建前端，再用 Vite preview 承载 `dist/`：
+
+```bash
+npm run start:prod
+npm run restart:prod
 ```
 
 等价脚本：
@@ -20,7 +29,7 @@ npm run restart
 ./scripts/demo.sh status
 ```
 
-`npm run start` 会启动三个服务：
+`npm run start` 和 `npm run start:prod` 都会启动三个服务：
 
 | 服务 | 端口 | 健康检查 |
 | --- | --- | --- |
@@ -29,6 +38,19 @@ npm run restart
 | FutureTech Runtime | `4096` | `http://127.0.0.1:4096/global/health` |
 
 服务状态记录在 `.runtime/services.json`，日志写入 `.runtime/*.log`。
+
+## 环境变量
+
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `FUTURETECH_CONSOLE_TARGET` | `http://127.0.0.1:4096` | Console Proxy 指向的 Runtime 地址 |
+| `FUTURETECH_CONSOLE_PROXY` | `http://127.0.0.1:5175` | 前端代理到的 Console Proxy 地址 |
+| `FUTURETECH_CONSOLE_PROXY_PORT` | `5175` | Console Proxy 监听端口 |
+| `FUTURETECH_WEB_MODE` | `dev` | `preview` 时使用构建后的前端 |
+| `FUTURETECH_RUNTIME_COMMAND` | `opencode` | Runtime CLI 启动命令 |
+| `FUTURETECH_PYTHON` | 自动选择 | 合同 Skill 执行 Python |
+| `FUTURETECH_SKILL_ROOTS` | 空 | 额外 Skill 根目录，多个路径用逗号分隔 |
+| `FUTURETECH_CONTRACT_SKILL_ROOT` | 仓库内置 Skill | 覆盖合同提取 Skill 目录 |
 
 ## 构建验收
 
@@ -47,6 +69,15 @@ curl -sS http://127.0.0.1:5174/futuretech-admin/runtime-status
 - `npm run status` 显示三个服务都是 `healthy`。
 - `5175/global/health` 返回 `200` JSON，不是跳转。
 - `runtime-status` 中 `healthy` 和 `fullConsoleProxy` 都为 `true`。
+
+部署态额外检查：
+
+```bash
+npm run restart:prod
+npm run status
+```
+
+确认 `.runtime/services.json` 中 AgentOS Web 的命令是 `npm run preview -- --port 5174`。
 
 ## Console 嵌入检查
 
@@ -103,7 +134,7 @@ curl -sS http://127.0.0.1:5174/futuretech-admin/agent-runs/<run-id>
 
 - `status` 最终为 `completed`。
 - `exitCode` 为 `0`。
-- `artifacts` 中包含 `.runtime/agentos-runs/<run-id>.jsonl`。
+- `artifacts` 中包含 `.runtime/agentos-runs/<run-id>.jsonl`、Excel、summary JSON 和 result JSON。
 - 前端 Run 追踪能看到步骤、Runtime 事件摘要和产物路径。
 
 ## 状态文件
@@ -113,9 +144,11 @@ curl -sS http://127.0.0.1:5174/futuretech-admin/agent-runs/<run-id>
 | `.runtime/services.json` | 服务 PID、端口和日志路径 |
 | `.runtime/agentos-state.json` | Agent、Run、安全策略、审计事件 |
 | `.runtime/agentos-runs/*.jsonl` | 每次 Run 的完整 Runtime 事件 |
+| `.runtime/agentos-runs/*-outputs/` | 每次 Run 的 Excel / JSON 产物 |
+| `.runtime/uploads/` | 上传文件临时目录 |
 | `.runtime/futuretech-runtime.log` | Runtime 服务日志 |
 | `.runtime/futuretech-console-proxy.log` | Console Proxy 日志 |
-| `.runtime/agentos-web.log` | 前端开发服务日志 |
+| `.runtime/agentos-web.log` | 前端服务日志 |
 
 `.runtime/` 是运行态目录，不应作为产品配置源提交。
 

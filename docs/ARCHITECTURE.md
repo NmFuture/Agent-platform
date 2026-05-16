@@ -14,6 +14,7 @@ FutureTech Console Proxy (5175)
   -> 管理 AgentOS 本地状态
   -> 反向代理 FutureTech Runtime
   -> 透明转发完整 Console
+  -> 读取 Runtime Skill 与仓库内置 skills/
 
 FutureTech Runtime (4096)
   -> 会话 / 文件 / 终端 / Skill / MCP / 事件流
@@ -36,9 +37,9 @@ FutureTech Runtime (4096)
 | 对象 | 关键字段 | 说明 |
 | --- | --- | --- |
 | Agent | `id`, `name`, `rolePrompt`, `skills`, `knowledgeBases`, `permissions`, `outputPolicy` | 有身份和边界的业务智能体 |
-| Skill | `id`, `name`, `description`, `version`, `sourceRoot`, `path` | 从 Runtime `/skill` 读取 |
+| Skill | `id`, `name`, `description`, `version`, `sourceRoot`, `path` | 合并 Runtime `/skill` 和仓库内置 `skills/` |
 | Run | `id`, `agentId`, `status`, `steps`, `events`, `artifacts`, `exitCode` | 一次任务执行 |
-| Artifact | `type`, `name`, `path` | 当前主要是 Runtime JSONL 日志 |
+| Artifact | `type`, `name`, `path` | Runtime JSONL 日志、Excel、summary JSON、result JSON 等产物 |
 | AuditEvent | `time`, `user`, `action`, `target` | 保存关键管理和运行事件 |
 | SecurityPolicy | `runtimeConsole`, `defaultRunMode`, `rules` | 控制 Console 完整能力和业务 Agent 边界 |
 
@@ -49,8 +50,8 @@ FutureTech Runtime (4096)
   -> POST /futuretech-admin/agent-runs
   -> 读取 Agent 身份和 Skill 白名单
   -> 合同提取类任务使用仓库内置 skills/contract-e2e-excel
-  -> 生成 Runtime prompt
-  -> 调用 FutureTech Runtime 执行
+  -> 校验并保存上传 PDF
+  -> 调用 Skill 脚本生成 Excel / summary JSON / result JSON
   -> 写入 .runtime/agentos-runs/<run-id>.jsonl
   -> 更新 .runtime/agentos-state.json
   -> 前端轮询 GET /futuretech-admin/agent-runs/:id

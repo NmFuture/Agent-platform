@@ -23,8 +23,10 @@ Run from the project root:
 
 ```bash
 npm run start
+npm run start:prod
 npm run stop
 npm run restart
+npm run restart:prod
 npm run status
 npm run build
 ```
@@ -44,9 +46,24 @@ Equivalent helper scripts:
 - Keep the AgentOS shell UI and docs branded as FutureTech, FutureTech Runtime, FutureTech Skill, and AgentOS.
 - Do not rewrite embedded Console HTML, JavaScript, JSON, SSE, or WebSocket content for branding; full Runtime capability has priority.
 - Keep internal implementation details out of AgentOS product text.
+- The bundled contract extraction Skill lives at `skills/contract-e2e-excel`; do not point the default contract Agent back to a user-specific local project path.
+- Deployment mode uses `npm run start:prod` or `npm run restart:prod`, which builds the frontend and starts AgentOS Web in Vite preview mode.
 - New Agent, Run, Skill, Runtime, Security, or model-profile behavior must update `docs/ARCHITECTURE.md`, `docs/futuretech-skill-integration.md`, `docs/RUNBOOK.md`, and `README.md` when relevant.
 - Do not commit `.runtime/` as product configuration; it is local runtime state.
 - Before reporting completion for code changes, run `npm run build` and `npm run status` when services are expected to be running.
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `FUTURETECH_CONSOLE_TARGET` | `http://127.0.0.1:4096` | Runtime target for Console Proxy |
+| `FUTURETECH_CONSOLE_PROXY` | `http://127.0.0.1:5175` | Frontend proxy target for Admin and Console requests |
+| `FUTURETECH_CONSOLE_PROXY_PORT` | `5175` | Console Proxy listening port |
+| `FUTURETECH_WEB_MODE` | `dev` | Use `preview` for build-backed deployment |
+| `FUTURETECH_RUNTIME_COMMAND` | `opencode` | Runtime CLI command used by `scripts/manage-demo.mjs` |
+| `FUTURETECH_PYTHON` | bundled Python or `python3` | Python interpreter for Skill scripts |
+| `FUTURETECH_SKILL_ROOTS` | empty | Extra comma-separated Skill roots |
+| `FUTURETECH_CONTRACT_SKILL_ROOT` | `skills/contract-e2e-excel` | Optional contract Skill override |
 
 ## Key Docs
 

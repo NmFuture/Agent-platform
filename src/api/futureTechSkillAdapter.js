@@ -26,10 +26,14 @@ export function advanceDemoRun(run, activeIndex) {
 }
 
 export const backendContract = {
+  agentos: "GET /futuretech-admin/agentos",
   createTask: "POST /futuretech-admin/agent-runs",
   getTask: "GET /futuretech-admin/agent-runs/:id",
   saveAgent: "POST /futuretech-admin/agents",
   createBlueprint: "POST /futuretech-admin/agent-blueprints/from-skill",
   listSkills: "GET /futuretech-admin/skills",
   runtimeStatus: "GET /futuretech-admin/runtime-status",
+  securityPolicy: "GET/POST /futuretech-admin/security-policy",
+  modelProfiles: "GET /futuretech-admin/model-profiles",
+  activateModel: "POST /futuretech-admin/model-profiles/activate",
 };

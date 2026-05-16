@@ -9,13 +9,14 @@
 - 新增 `/futuretech-admin/*` 本机平台 API，覆盖 Agent、Run、Skill、Runtime、Security、Model Profile。
 - Agent 市场只展示可用业务 Agent。
 - 合同提取智能体接入 `contract-e2e-excel`，可输入 PDF 并输出 Excel、summary JSON 和 result JSON。
-- `contract-e2e-excel` 已随仓库发布，合同提取不再依赖个人电脑上的合同项目目录。
+- `contract-e2e-excel` 已随仓库发布，合同提取不再依赖仓库外部的合同项目目录。
 - 定制中心可从 Skill 生成 Agent 蓝图，保留普通表单和高级 JSON 两种编辑方式。
 - Agent 市场和定制中心可创建 Run，由后端执行。
 - Run 追踪展示步骤、事件摘要、产物路径和退出码。
 - Agent 身份、安全策略、审计事件保存到 `.runtime/agentos-state.json`。
 - 每次 Run 的完整事件写入 `.runtime/agentos-runs/*.jsonl`。
 - Skill 市场改为合并 Runtime 与仓库内置 Skill registry，并支持搜索和分类。
+- 新增 `npm run start:prod` 和 `npm run restart:prod`，用于构建后单机部署。
 
 ### 产品与品牌
 
@@ -32,3 +33,4 @@
 - 新增 `docs/ARCHITECTURE.md` 架构、数据模型和执行链路。
 - 重写 `docs/futuretech-skill-integration.md` 接入指南。
 - 新增 `docs/RUNBOOK.md` 运维、验收和排障手册。
+- 同步根 `AGENTS.md`，补充内置 Skill、部署命令和环境变量边界。
