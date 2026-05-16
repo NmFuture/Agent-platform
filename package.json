@@ -1,0 +1,25 @@
+{
+  "name": "nm-agent-platform-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "sh scripts/demo.sh start",
+    "stop": "sh scripts/demo.sh stop",
+    "restart": "sh scripts/demo.sh restart",
+    "status": "sh scripts/demo.sh status",
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "console-proxy": "node server/futuretechConsoleProxy.mjs",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.9",
+    "typescript": "^5.9.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "lucide-react": "^0.544.0"
+  },
+  "devDependencies": {}
+}
