@@ -10,7 +10,7 @@ export const agents = [
     status: "已启用",
     owner: "法务 / 商务 / 项目交付",
     description: "读取合同 PDF，按内置规则输出五类结构化 Excel 和抽取统计。",
-    inputs: ["合同 PDF", "本机 PDF 路径"],
+    inputs: ["合同 PDF"],
     outputs: ["合同抽取结果 Excel", "抽取统计 JSON", "结构化抽取 JSON"],
     skills: ["contract-e2e-excel"],
     runnable: true,
@@ -25,7 +25,7 @@ export const runSteps = [
   {
     key: "input",
     title: "读取输入",
-    detail: "接收上传 PDF 或本机 PDF 绝对路径，创建本次任务工作目录。",
+    detail: "接收上传 PDF，创建本次任务工作目录。",
     tool: "contract-e2e-excel",
     source: "合同 PDF",
   },
@@ -53,8 +53,8 @@ export const runSteps = [
 ];
 
 export const knowledgeBases = [
-  { name: "合同提取规则包", count: "248", freshness: "本机 Skill", type: "字段规则" },
-  { name: "Excel 输出模板", count: "5 sheets", freshness: "本机 Skill", type: "交付模板" },
+  { name: "合同提取规则包", count: "248", freshness: "内置 Skill", type: "字段规则" },
+  { name: "Excel 输出模板", count: "5 sheets", freshness: "内置 Skill", type: "交付模板" },
   { name: "运行产物目录", count: ".runtime", freshness: "实时写入", type: "审计记录" },
 ];
 

@@ -101,17 +101,22 @@ function brandedProxy(pathPrefix) {
   };
 }
 
+const proxy = {
+  "/futuretech-admin": {
+    target: futureTechAdminTarget,
+    changeOrigin: true,
+  },
+  ...Object.fromEntries(
+    proxyPaths.map((pathPrefix) => [pathPrefix, brandedProxy(pathPrefix)])
+  ),
+};
+
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      "/futuretech-admin": {
-        target: futureTechAdminTarget,
-        changeOrigin: true,
-      },
-      ...Object.fromEntries(
-        proxyPaths.map((pathPrefix) => [pathPrefix, brandedProxy(pathPrefix)])
-      ),
-    },
+    proxy,
+  },
+  preview: {
+    proxy,
   },
 });

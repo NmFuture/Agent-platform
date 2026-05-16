@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "sh scripts/demo.sh start",
+    "start:prod": "npm run build && FUTURETECH_WEB_MODE=preview sh scripts/demo.sh start",
     "stop": "sh scripts/demo.sh stop",
     "restart": "sh scripts/demo.sh restart",
+    "restart:prod": "npm run build && FUTURETECH_WEB_MODE=preview sh scripts/demo.sh restart",
     "status": "sh scripts/demo.sh status",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

@@ -87,15 +87,28 @@ curl -sS -X POST http://127.0.0.1:5174/futuretech-admin/agent-blueprints/from-sk
 ### 创建合同提取 Run
 
 ```bash
-curl -sS -X POST http://127.0.0.1:5174/futuretech-admin/agent-runs \
-  -H 'content-type: application/json' \
-  -d '{
-    "agentId": "contract-extraction",
-    "message": "按默认规则输出合同抽取 Excel。",
-    "inputs": {
-      "pdfPath": "/Users/wlb/Desktop/OhMy/合同提取/某某风电项目合同.pdf"
-    }
-  }'
+PDF_PATH="/absolute/path/to/contract.pdf" node - <<'NODE'
+const { readFileSync } = await import("node:fs");
+const { basename } = await import("node:path");
+const pdfPath = process.env.PDF_PATH;
+const response = await fetch("http://127.0.0.1:5174/futuretech-admin/agent-runs", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    agentId: "contract-extraction",
+    message: "按默认规则输出合同抽取 Excel。",
+    inputs: {
+      files: [{
+        field: "pdf",
+        name: basename(pdfPath),
+        mimeType: "application/pdf",
+        dataBase64: readFileSync(pdfPath).toString("base64"),
+      }],
+    },
+  }),
+});
+console.log(await response.text());
+NODE
 ```
 
 返回值包含 `run.id`。随后轮询：

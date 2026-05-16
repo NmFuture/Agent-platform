@@ -1,10 +1,6 @@
 # AgentOS 运维手册
 
-本文用于本机启动、验收和排障。命令默认在项目根目录执行：
-
-```bash
-cd /Users/wlb/Agent/nm-agent-platform-demo
-```
+本文用于本机启动、验收和排障。命令默认在项目根目录执行。
 
 ## 启动与停止
 
@@ -70,18 +66,31 @@ curl -N http://127.0.0.1:5175/event
 
 ## Agent Run 冒烟
 
-创建一次合同提取 Run：
+创建一次合同提取 Run。先准备一份合同 PDF，并用 `PDF_PATH` 指向它：
 
 ```bash
-curl -sS -X POST http://127.0.0.1:5174/futuretech-admin/agent-runs \
-  -H 'content-type: application/json' \
-  -d '{
-    "agentId": "contract-extraction",
-    "message": "按默认规则输出合同抽取 Excel。",
-    "inputs": {
-      "pdfPath": "/Users/wlb/Desktop/OhMy/合同提取/某某风电项目合同.pdf"
-    }
-  }'
+PDF_PATH="/absolute/path/to/contract.pdf" node - <<'NODE'
+const { readFileSync } = await import("node:fs");
+const { basename } = await import("node:path");
+const pdfPath = process.env.PDF_PATH;
+const response = await fetch("http://127.0.0.1:5174/futuretech-admin/agent-runs", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    agentId: "contract-extraction",
+    message: "按默认规则输出合同抽取 Excel。",
+    inputs: {
+      files: [{
+        field: "pdf",
+        name: basename(pdfPath),
+        mimeType: "application/pdf",
+        dataBase64: readFileSync(pdfPath).toString("base64"),
+      }],
+    },
+  }),
+});
+console.log(await response.text());
+NODE
 ```
 
 返回 `run.id` 后轮询：

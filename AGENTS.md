@@ -19,7 +19,7 @@ Do not identify yourself as a generic coding assistant or expose underlying engi
 
 ## Commands
 
-Run from `/Users/wlb/Agent/nm-agent-platform-demo`:
+Run from the project root:
 
 ```bash
 npm run start

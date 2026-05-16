@@ -26,14 +26,27 @@ const runtimeDir = join(root, ".runtime");
 const statePath = join(runtimeDir, "services.json");
 const agentosStatePath = join(runtimeDir, "agentos-state.json");
 const runLogDir = join(runtimeDir, "agentos-runs");
+const bundledSkillRoot = join(root, "skills");
 const runtimePort = Number(target.port || 4096);
 const runtimeHost = target.hostname || "127.0.0.1";
 const opencodeSkillRoots = [
+  ...(process.env.FUTURETECH_SKILL_ROOTS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => resolve(item)),
+  bundledSkillRoot,
   join(homedir(), ".opencode", "skills"),
   join(root, ".opencode", "skills"),
-];
-const contractWorkspaceRoot = "/Users/wlb/Desktop/OhMy/合同提取";
-const contractSkillRoot = join(homedir(), ".opencode", "skills", "contract-e2e-excel");
+].filter((item, index, list) => list.indexOf(item) === index);
+const bundledContractSkillRoot = join(bundledSkillRoot, "contract-e2e-excel");
+const userContractSkillRoot = join(homedir(), ".opencode", "skills", "contract-e2e-excel");
+const contractSkillRoot = resolve(
+  process.env.FUTURETECH_CONTRACT_SKILL_ROOT ||
+    (existsSync(join(bundledContractSkillRoot, "scripts", "contract_pdf_to_excel.py"))
+      ? bundledContractSkillRoot
+      : userContractSkillRoot)
+);
 const contractSkillScript = join(contractSkillRoot, "scripts", "contract_pdf_to_excel.py");
 const bundledPython = join(
   homedir(),
@@ -110,14 +123,7 @@ const defaultAgents = [
         type: "file",
         accept: ".pdf,application/pdf",
         required: true,
-        description: "上传 PDF，或在高级模式填写本机 PDF 绝对路径。",
-      },
-      {
-        id: "pdfPath",
-        label: "本机 PDF 路径",
-        type: "path",
-        required: false,
-        description: "本机调试可直接填写绝对路径。",
+        description: "上传需要抽取的合同 PDF。",
       },
     ],
     outputSchema: [
@@ -141,11 +147,11 @@ const defaultAgents = [
       skillId: "contract-e2e-excel",
       command: pythonCommand,
       script: contractSkillScript,
-      cwd: contractWorkspaceRoot,
+      cwd: root,
       outputDirMode: "per-run",
     },
     validation: ["xlsx-openable", "five-contract-sheets", "summary-json"],
-    outputPolicy: "必须输出 Excel 绝对路径、类型1命中统计、类型2-5行数和需要人工复核的说明。",
+    outputPolicy: "必须输出 Excel 产物路径、类型1命中统计、类型2-5行数和需要人工复核的说明。",
   },
 ];
 
@@ -322,6 +328,10 @@ function formatDate(date) {
 }
 
 function labelSkillRoot(skillRoot) {
+  if (skillRoot === bundledSkillRoot) {
+    return "内置 Skill";
+  }
+
   if (skillRoot.startsWith(homedir())) {
     return skillRoot.replace(homedir(), "~");
   }
@@ -435,7 +445,7 @@ function parseSkillFile(skillPath, id, skillRoot) {
   const version =
     frontmatter.version ||
     content.match(/当前版本[:：]\s*\*{0,2}([^\s*]+)/)?.[1] ||
-    "本机版本";
+    "内置版本";
   const stats = statSync(skillPath);
 
   return enrichSkill({
@@ -443,9 +453,9 @@ function parseSkillFile(skillPath, id, skillRoot) {
     name: compactMarkdown(frontmatter.name || headingName || id),
     description:
       compactMarkdown(frontmatter.description || overview || extractFirstParagraph(content)) ||
-      "本机 FutureTech Skill。",
+      "FutureTech Skill。",
     version,
-    status: "本机可用",
+    status: "可用",
     source: "FutureTech",
     sourceRoot: labelSkillRoot(skillRoot),
     path: skillPath,
@@ -461,6 +471,7 @@ function skillRootFromLocation(location = "") {
 }
 
 function sourceNameFromRoot(skillRoot = "") {
+  if (skillRoot === bundledSkillRoot) return "FutureTech Skills";
   if (skillRoot.includes("/.agents/skills")) return "Agents Skills";
   if (skillRoot.includes("/.claude/skills")) return "Claude Skills";
   if (skillRoot.includes("/.opencode/skills")) return "FutureTech Skills";
@@ -551,6 +562,7 @@ function listLocalOpencodeSkillFiles() {
 }
 
 async function listOpencodeSkills() {
+  const localCatalog = listLocalOpencodeSkillFiles();
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
@@ -575,14 +587,24 @@ async function listOpencodeSkills() {
           rootMap.get(skill.sourceRoot).count += 1;
         }
 
-        return buildSkillCatalogPayload("futuretech-runtime", [...rootMap.values()], skills);
+        const byId = new Map(skills.map((skill) => [skill.id, skill]));
+        for (const skill of localCatalog.skills || []) {
+          if (!byId.has(skill.id) || String(skill.path || "").startsWith(bundledSkillRoot)) {
+            byId.set(skill.id, skill);
+          }
+        }
+        const roots = [...rootMap.values(), ...(localCatalog.roots || [])].filter(
+          (rootItem, index, list) =>
+            list.findIndex((item) => `${item.path || ""}|${item.label || ""}` === `${rootItem.path || ""}|${rootItem.label || ""}`) === index
+        );
+        return buildSkillCatalogPayload("futuretech-runtime+bundled", roots, [...byId.values()]);
       }
     }
   } catch {
     // If the runtime is not ready, fall back to the local compatibility scan.
   }
 
-  return listLocalOpencodeSkillFiles();
+  return localCatalog;
 }
 
 async function readRuntimeProviderCatalog() {
@@ -796,11 +818,34 @@ function normalizeAgent(agent) {
   };
 }
 
+function normalizeContractAgent(agent = {}) {
+  const base = defaultAgents[0];
+  return normalizeAgent({
+    ...base,
+    ...agent,
+    id: base.id,
+    skills: base.skills,
+    knowledgeBases: base.knowledgeBases,
+    permissions: base.permissions,
+    inputSchema: base.inputSchema,
+    outputSchema: base.outputSchema,
+    runner: base.runner,
+    validation: base.validation,
+    outputPolicy: base.outputPolicy,
+    marketplace: true,
+    runnable: true,
+  });
+}
+
 function normalizeAgentList(storedAgents = []) {
   const byId = new Map(defaultAgents.map((agent) => [agent.id, normalizeAgent(agent)]));
   for (const agent of storedAgents) {
     if (!agent?.id || !isRunnableAgent(agent)) continue;
-    byId.set(agent.id, normalizeAgent({ ...byId.get(agent.id), ...agent }));
+    const normalized =
+      agent.id === defaultAgents[0].id
+        ? normalizeContractAgent(agent)
+        : normalizeAgent({ ...byId.get(agent.id), ...agent });
+    byId.set(agent.id, normalized);
   }
   return [...byId.values()].filter((agent) => agent.runnable);
 }
@@ -880,15 +925,20 @@ function makeDefaultAgentosState() {
 function loadAgentosState() {
   try {
     const state = JSON.parse(readFileSync(agentosStatePath, "utf8"));
-    return {
+    const agents = normalizeAgentList(Array.isArray(state.agents) ? state.agents : []);
+    const normalizedState = {
       ...makeDefaultAgentosState(),
       ...state,
       version: 2,
-      agents: normalizeAgentList(Array.isArray(state.agents) ? state.agents : []),
+      agents,
       runs: Array.isArray(state.runs) ? state.runs : [],
       auditEvents: Array.isArray(state.auditEvents) ? state.auditEvents : [],
       securityPolicy: state.securityPolicy || defaultSecurityPolicy,
     };
+    if (JSON.stringify(state.agents || []) !== JSON.stringify(agents)) {
+      saveAgentosState(normalizedState);
+    }
+    return normalizedState;
   } catch {
     const state = makeDefaultAgentosState();
     saveAgentosState(state);
@@ -1075,17 +1125,10 @@ function safeFileName(name = "input.pdf") {
 
 function resolveRunPdfInput(runId, body = {}) {
   const inputs = body.inputs || {};
-  const explicitPath = inputs.pdfPath || body.pdfPath;
-  if (explicitPath) {
-    const pdfPath = resolve(String(explicitPath));
-    if (!existsSync(pdfPath)) throw new Error(`PDF 文件不存在：${pdfPath}`);
-    return pdfPath;
-  }
-
   const files = Array.isArray(inputs.files) ? inputs.files : [];
   const file = files.find((item) => item.field === "pdf" || /\.pdf$/i.test(item.name || ""));
   if (!file?.dataBase64) {
-    throw new Error("请上传合同 PDF，或填写本机 PDF 绝对路径。");
+    throw new Error("请上传合同 PDF。");
   }
 
   const uploadDir = join(runtimeDir, "uploads", runId);
@@ -1153,6 +1196,8 @@ function createContractExtractionRun(agent, body) {
   const logPath = join(runLogDir, `${runId}.jsonl`);
   const outputDir = join(runLogDir, `${runId}-outputs`);
   const selectedSkills = Array.isArray(body.skillIds) && body.skillIds.length ? body.skillIds : agent.skills;
+  const uploadedFiles = Array.isArray(body.inputs?.files) ? body.inputs.files : [];
+  const uploadedPdf = uploadedFiles.find((item) => item.field === "pdf" || /\.pdf$/i.test(item.name || ""));
   const run = {
     id: runId,
     real: true,
@@ -1163,7 +1208,7 @@ function createContractExtractionRun(agent, body) {
     updatedAt: new Date().toISOString(),
     message: body.message || "",
     skills: selectedSkills,
-    inputs: { pdfPath: body.inputs?.pdfPath || body.pdfPath || "", uploaded: Boolean(body.inputs?.files?.length) },
+    inputs: { fileName: uploadedPdf?.name || "", uploaded: Boolean(uploadedPdf) },
     steps: createRunSteps(agent),
     events: [],
     artifacts: [{ type: "runtime-log", name: "AgentOS 运行日志", path: logPath }],
@@ -1686,7 +1731,7 @@ async function handleAdmin(req, res) {
     const incoming = body.agent || body;
     const state = loadAgentosState();
     const id = incoming.id || `agent-${Date.now()}`;
-    const agent = normalizeAgent({
+    const agentDraft = normalizeAgent({
       ...defaultAgents[0],
       ...incoming,
       id,
@@ -1694,6 +1739,7 @@ async function handleAdmin(req, res) {
       knowledgeBases: Array.isArray(incoming.knowledgeBases) ? incoming.knowledgeBases : [],
       updatedAt: new Date().toISOString(),
     });
+    const agent = id === defaultAgents[0].id ? normalizeContractAgent(agentDraft) : agentDraft;
     const existingIndex = state.agents.findIndex((item) => item.id === id);
     if (existingIndex >= 0) state.agents[existingIndex] = agent;
     else state.agents = [agent, ...state.agents];

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Contract Extraction Result",
+  "type": "object",
+  "required": [
+    "metadata",
+    "type_1_direct_field_extraction",
+    "type_2_payment_terms",
+    "type_3_default_liability",
+    "type_4_contract_risk",
+    "type_5_document_delivery"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "contract_file": {
+          "type": "string"
+        },
+        "extracted_at": {
+          "type": "string"
+        },
+        "extractor_version": {
+          "type": "string"
+        }
+      }
+    },
+    "type_1_direct_field_extraction": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "value",
+          "evidence_text",
+          "source_location",
+          "confidence",
+          "status"
+        ],
+        "properties": {
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "array",
+              "object",
+              "null"
+            ]
+          },
+          "evidence_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "章节、页码、条款号或原文位置。"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "found",
+              "not_found",
+              "ambiguous",
+              "not_applicable"
+            ]
+          }
+        }
+      }
+    },
+    "type_2_payment_terms": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "type_3_default_liability": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "type_4_contract_risk": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "type_5_document_delivery": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

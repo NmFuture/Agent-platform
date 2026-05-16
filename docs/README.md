@@ -20,6 +20,7 @@
 - `5175` 是完整 FutureTech Console 反向代理，不再只是跳转。
 - `5174` 前端通过 `/futuretech-admin/*` 管理 AgentOS 状态。
 - `4096` FutureTech Runtime 负责执行。
+- `skills/contract-e2e-excel` 随仓库发布，合同提取只需要上传 PDF。
 - Agent 身份、Run、Security policy、Audit 写入 `.runtime/agentos-state.json`。
 - Run 的完整事件日志写入 `.runtime/agentos-runs/*.jsonl`。
 

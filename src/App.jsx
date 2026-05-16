@@ -612,7 +612,6 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
   const runnableAgents = agents.filter((agent) => agent.runnable !== false && agent.runner);
   const selectedAgent = runnableAgents.find((agent) => agent.id === selectedAgentId) || runnableAgents[0];
   const [pdfFile, setPdfFile] = useState(null);
-  const [pdfPath, setPdfPath] = useState("");
   const [message, setMessage] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
 
@@ -621,7 +620,6 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
     setSubmitMessage("正在提交任务");
     try {
       const inputs = {};
-      if (pdfPath.trim()) inputs.pdfPath = pdfPath.trim();
       if (pdfFile) {
         inputs.files = [
           {
@@ -723,14 +721,6 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={(event) => setPdfFile(event.target.files?.[0] || null)}
-              />
-            </label>
-            <label>
-              本机 PDF 路径
-              <input
-                value={pdfPath}
-                onChange={(event) => setPdfPath(event.target.value)}
-                placeholder="/Users/wlb/Desktop/OhMy/合同提取/某某风电项目合同.pdf"
               />
             </label>
             <label>
@@ -983,7 +973,6 @@ function CustomCenter({
   const [blueprintText, setBlueprintText] = useState(JSON.stringify(publicAgentBlueprint(selectedAgent), null, 2));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState(null);
-  const [pdfPath, setPdfPath] = useState("");
   const [runMessage, setRunMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
 
@@ -1126,7 +1115,6 @@ function CustomCenter({
     if (!agent) return;
     try {
       const inputs = {};
-      if (pdfPath.trim()) inputs.pdfPath = pdfPath.trim();
       if (pdfFile) {
         inputs.files = [
           {
@@ -1232,14 +1220,6 @@ function CustomCenter({
               <label>
                 PDF 文件
                 <input type="file" accept=".pdf,application/pdf" onChange={(event) => setPdfFile(event.target.files?.[0] || null)} />
-              </label>
-              <label>
-                本机 PDF 路径
-                <input
-                  value={pdfPath}
-                  onChange={(event) => setPdfPath(event.target.value)}
-                  placeholder="/Users/wlb/Desktop/OhMy/合同提取/某某风电项目合同.pdf"
-                />
               </label>
               <label>
                 补充说明

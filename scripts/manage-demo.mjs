@@ -9,13 +9,15 @@ const root = resolve(__dirname, "..");
 const runtimeDir = join(root, ".runtime");
 const statePath = join(runtimeDir, "services.json");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const webMode = process.env.FUTURETECH_WEB_MODE === "preview" ? "preview" : "dev";
+const runtimeCommand = process.env.FUTURETECH_RUNTIME_COMMAND || "opencode";
 
 const services = [
   {
     id: "runtime",
     name: "FutureTech Runtime",
     port: 4096,
-    command: "opencode",
+    command: runtimeCommand,
     args: [
       "serve",
       "--port",
@@ -49,7 +51,10 @@ const services = [
     name: "AgentOS Web",
     port: 5174,
     command: npmCommand,
-    args: ["run", "dev", "--", "--port", "5174"],
+    args:
+      webMode === "preview"
+        ? ["run", "preview", "--", "--port", "5174"]
+        : ["run", "dev", "--", "--port", "5174"],
     readyUrl: "http://127.0.0.1:5174/",
     logFile: "agentos-web.log",
   },

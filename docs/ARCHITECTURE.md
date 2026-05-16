@@ -48,6 +48,7 @@ FutureTech Runtime (4096)
 用户点击运行
   -> POST /futuretech-admin/agent-runs
   -> 读取 Agent 身份和 Skill 白名单
+  -> 合同提取类任务使用仓库内置 skills/contract-e2e-excel
   -> 生成 Runtime prompt
   -> 调用 FutureTech Runtime 执行
   -> 写入 .runtime/agentos-runs/<run-id>.jsonl
@@ -85,4 +86,4 @@ FutureTech Runtime (4096)
 - 本机版本用 `.runtime/*.json` 做状态存储，便于快速验证；企业版应替换为数据库。
 - Run 事件在状态文件中只保存摘要，完整原始事件保存在 JSONL 日志，避免 UI 暴露过多内部信息。
 - Agent 市场和定制中心共用同一份 Agent registry，避免出现“展示 Agent”和“运行 Agent”不一致。
-- Skill 市场从 Runtime 实时读取，避免手工维护静态 Skill 清单。
+- Skill 市场合并 Runtime 实时清单和仓库内置 `skills/`，避免新环境缺少合同提取能力。
