@@ -1,6 +1,6 @@
 # 宁梦未来企业 Agent 基座
 
-这是宁梦未来科技的企业 AgentOS 本机实现，用于把 `FutureTech Runtime + FutureTech Skill` 产品化成可配置、可运行、可追踪的企业智能体工作台。
+这是宁梦未来科技的企业 AgentOS 本机实现，用于把 `FutureTech Runtime + FutureTech Skill` 产品化成可配置、可执行、可追踪的企业智能体工作台。
 
 当前版本已经具备本机闭环：完整嵌入 FutureTech Runtime Console，读取 Skill registry，保存 Agent 身份配置，并能创建 Run 交给后端执行。
 
@@ -30,7 +30,7 @@ AgentOS 是企业智能体基座：
 | --- | --- |
 | 仪表盘 | 平台入口、推荐 Agent、能力概览 |
 | 通用 Agent | 嵌入完整 FutureTech Console，适合复杂自由任务 |
-| Agent 市场 | 选择已绑定 runner 的业务 Agent，并启动 Run |
+| Agent 市场 | 选择业务 Agent，并启动任务 |
 | 技能市场 | 按分类和关键词查找 Runtime 已加载的 Skill |
 | 定制中心 | 从 Skill 生成 Agent 蓝图，配置身份、提示词、输入输出和测试运行 |
 | 设置 | 模型网关、Runtime 状态、安全策略和平台信息 |

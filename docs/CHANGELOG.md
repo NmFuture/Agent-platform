@@ -7,7 +7,7 @@
 - 将通用 Agent 从跳转式入口改为完整 FutureTech Console 嵌入。
 - `5175` 代理完整转发 Runtime 页面、API、SSE 和 WebSocket。
 - 新增 `/futuretech-admin/*` 本机平台 API，覆盖 Agent、Run、Skill、Runtime、Security、Model Profile。
-- Agent 市场只展示绑定 runner 的可运行 Agent。
+- Agent 市场只展示可用业务 Agent。
 - 合同提取智能体接入 `contract-e2e-excel`，可输入 PDF 并输出 Excel、summary JSON 和 result JSON。
 - 定制中心可从 Skill 生成 Agent 蓝图，保留普通表单和高级 JSON 两种编辑方式。
 - Agent 市场和定制中心可创建 Run，由后端执行。
@@ -22,7 +22,7 @@
 - 完整 Console 改为透明嵌入，不再为了品牌展示改写 Runtime 客户端内容。
 - 设置页拆分为模型网关、Runtime、Security、平台信息。
 - Runtime 和 Security 页面展示接口返回，不再是静态说明。
-- Skill 市场遮罩本机内部目录路径，只展示 FutureTech Registry。
+- Skill 市场不展示本机内部目录路径或来源编号。
 
 ### 文档同步
 

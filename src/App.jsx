@@ -146,6 +146,29 @@ function schemaSummary(schema = []) {
   return schema.map((item) => item.label || item.id).filter(Boolean).join("、") || "-";
 }
 
+function publicAgentBlueprint(agent = {}) {
+  const {
+    runner,
+    runnable,
+    real,
+    source,
+    sourceRoot,
+    path,
+    icon,
+    color,
+    ...publicDraft
+  } = agent;
+  return {
+    ...publicDraft,
+    workflow: runner
+      ? {
+          mode: runner.type === "skill-script" ? "文件处理流程" : "对话执行流程",
+          skill: runner.skillId || agent.skills?.[0] || "",
+        }
+      : undefined,
+  };
+}
+
 function toRunView(run) {
   if (!run) return null;
   return {
@@ -156,7 +179,7 @@ function toRunView(run) {
 }
 
 function defaultTaskForAgent(agent) {
-  return `请以${agent.name}身份执行一次真实任务：先说明可用 Skill、需要的输入、执行计划和人工确认点；如果缺少业务文件，不要编造结果。`;
+  return `请以${agent.name}身份执行一次业务任务：先说明可用 Skill、需要的输入、执行计划和人工确认点；如果缺少业务文件，不要编造结果。`;
 }
 
 function App() {
@@ -501,7 +524,7 @@ function Dashboard({
       <div className="metric-card">
         <PanelTitle icon={Bot} title="业务 Agent" />
         <strong>{runnableCount}</strong>
-        <span>已发布且绑定 runner 的可运行 Agent</span>
+        <span>当前可用的业务入口</span>
       </div>
       <div className="metric-card">
         <PanelTitle icon={Puzzle} title="能力包" />
@@ -511,7 +534,7 @@ function Dashboard({
       <div className="metric-card">
         <PanelTitle icon={History} title="运行记录" />
         <strong>{runCount}</strong>
-        <span>后端真实任务和产物审计记录</span>
+        <span>任务记录和结果文件</span>
       </div>
 
       <div className="quick-deploy">
@@ -622,7 +645,7 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
         <div className="section-heading">
           <div>
             <p className="eyebrow">Agent Catalog</p>
-            <h2>可运行 Agent</h2>
+            <h2>业务 Agent</h2>
           </div>
           <button className="ghost-button" type="button" onClick={onCustomize}>
             <SlidersHorizontal size={17} />
@@ -682,7 +705,7 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
         {runnableAgents.length === 0 && (
           <div className="empty-state">
             <Bot size={22} />
-            <strong>还没有发布可运行 Agent</strong>
+            <strong>还没有可用 Agent</strong>
             <span>请先在定制中心从 Skill 创建并发布 Agent。</span>
           </div>
         )}
@@ -738,13 +761,6 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
             </div>
           </>
         )}
-        <div className="human-gate blue">
-          <Sparkles size={18} />
-          <div>
-            <strong>只展示可运行</strong>
-            <p>Agent 市场只发布已经绑定 runner、输入和输出的 Agent。</p>
-          </div>
-        </div>
       </aside>
     </section>
   );
@@ -767,10 +783,6 @@ function SkillMarketplace({ onOpenCustom }) {
       .toLowerCase()
       .includes(q);
   });
-  const existingRoots = (skillState.roots ?? []).filter((rootItem) => rootItem.exists);
-  const sourceSummary = existingRoots
-    .map((rootItem, index) => `${formatSkillSourceLabel(rootItem.label, index)}${rootItem.count ? `（${rootItem.count}）` : ""}`)
-    .join("、");
   const categories = [{ id: "all", label: "全部", count: allSkills.length }, ...(skillState.categories || [])];
 
   useEffect(() => {
@@ -834,11 +846,6 @@ function SkillMarketplace({ onOpenCustom }) {
               {skillLoading ? "正在读取能力包" : `${visibleSkills.length} / ${allSkills.length} 个能力包`}
             </strong>
           </div>
-          <p>
-            {existingRoots.length > 0
-              ? `来源：${sourceSummary}`
-              : "未找到本机 Skill 目录"}
-          </p>
         </div>
 
         <div className="skill-search-panel">
@@ -898,7 +905,6 @@ function SkillMarketplace({ onOpenCustom }) {
                 <div className="skill-meta-grid">
                   <span>{skill.category}</span>
                   <span>{skill.version}</span>
-                  <span>{formatSkillSourceLabel(skill.source)}</span>
                   <span>{skill.updated}</span>
                 </div>
                 <div className="skill-io">
@@ -947,32 +953,9 @@ function SkillMarketplace({ onOpenCustom }) {
           ))}
         </div>
 
-        <PanelTitle icon={Database} title="来源目录" />
-        <div className="skill-root-list">
-          {(skillState.roots ?? []).map((rootItem, index) => (
-            <div className={rootItem.exists ? "active" : ""} key={rootItem.path}>
-              <strong>{formatSkillSourceLabel(rootItem.label, index)}</strong>
-              <span>
-                {rootItem.exists
-                  ? `已加载${rootItem.count ? ` ${rootItem.count} 个` : ""}`
-                  : "未创建"}
-              </span>
-            </div>
-          ))}
-        </div>
       </aside>
     </section>
   );
-}
-
-function formatSkillSourceLabel(value = "", index = 0) {
-  const text = String(value || "");
-  if (!text) return "FutureTech Registry";
-  if (text.startsWith("~/") || text.startsWith("/") || text.includes("/skills")) {
-    return `FutureTech Registry ${index + 1}`;
-  }
-  if (/skills/i.test(text) && !/futuretech/i.test(text)) return "FutureTech";
-  return text;
 }
 
 function CustomCenter({
@@ -996,7 +979,8 @@ function CustomCenter({
     skillsText: (selectedAgent.skills || []).join(", "),
     marketplace: selectedAgent.marketplace !== false,
   });
-  const [blueprintText, setBlueprintText] = useState(JSON.stringify(selectedAgent, null, 2));
+  const [agentDraft, setAgentDraft] = useState(selectedAgent);
+  const [blueprintText, setBlueprintText] = useState(JSON.stringify(publicAgentBlueprint(selectedAgent), null, 2));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfPath, setPdfPath] = useState("");
@@ -1030,6 +1014,7 @@ function CustomCenter({
       ...agent,
       marketplace: agent.marketplace !== false,
     };
+    setAgentDraft(normalized);
     setSimpleForm({
       name: normalized.name || "",
       businessGoal: normalized.businessGoal || normalized.description || "",
@@ -1039,7 +1024,7 @@ function CustomCenter({
       skillsText: (normalized.skills || []).join(", "),
       marketplace: normalized.marketplace !== false,
     });
-    setBlueprintText(JSON.stringify(normalized, null, 2));
+    setBlueprintText(JSON.stringify(publicAgentBlueprint(normalized), null, 2));
   };
 
   const generateFromSkill = async (skillId = selectedSkillId) => {
@@ -1074,6 +1059,7 @@ function CustomCenter({
     } catch {
       blueprint = {};
     }
+    const { workflow, runner, runnable, ...publicBlueprint } = blueprint;
     const skillsList = simpleForm.skillsText
       .split(/[,，\s]+/)
       .map((item) => item.trim())
@@ -1099,7 +1085,8 @@ function CustomCenter({
         required: index === 0,
       }));
     return {
-      ...blueprint,
+      ...agentDraft,
+      ...publicBlueprint,
       name: simpleForm.name,
       businessGoal: simpleForm.businessGoal,
       description: simpleForm.businessGoal || blueprint.description,
@@ -1108,6 +1095,7 @@ function CustomCenter({
       inputSchema,
       outputSchema,
       marketplace: simpleForm.marketplace,
+      runner: agentDraft.runner,
       runnable: true,
     };
   };
@@ -1182,7 +1170,7 @@ function CustomCenter({
         <div className="builder-steps" aria-label="定制步骤">
           <BuilderStep index="1" title="选择 Skill" text="系统自动生成 Agent 草案。" active />
           <BuilderStep index="2" title="填写目标" text="普通用户只填输入、输出和职责。" active />
-          <BuilderStep index="3" title="高级蓝图" text="保留 runner、权限和校验自由度。" active />
+          <BuilderStep index="3" title="高级蓝图" text="保留流程、权限和校验自由度。" active />
         </div>
 
         <div className="builder-panel simple-builder-panel">
@@ -1264,7 +1252,7 @@ function CustomCenter({
             </button>
             {advancedOpen && (
               <label className="blueprint-editor">
-                Agent Blueprint JSON
+                高级配置 JSON
                 <textarea value={blueprintText} onChange={(event) => setBlueprintText(event.target.value)} />
               </label>
             )}
@@ -1303,7 +1291,7 @@ function CustomCenter({
           <AlertTriangle size={18} />
           <div>
             <strong>人工确认</strong>
-            <p>普通用户填写目标，高级用户可以展开蓝图修改 runner、权限、校验和发布边界。</p>
+            <p>普通用户填写目标，高级用户可以展开蓝图调整流程、权限、校验和发布边界。</p>
           </div>
         </div>
       </aside>
@@ -1339,7 +1327,7 @@ function TraceView({ run, progress, activeRunStep, onStartRun, platformError }) 
         <div className="run-summary">
           <div>
             <span className="summary-label">当前任务</span>
-            <strong>{run ? `${run.agentName || "Agent"} / ${run.real ? "Runtime 任务" : "本地任务"}` : "等待启动任务"}</strong>
+            <strong>{run ? `${run.agentName || "Agent"} / 任务记录` : "等待启动任务"}</strong>
           </div>
           <div>
             <span className="summary-label">当前步骤</span>
@@ -1454,6 +1442,9 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
   const [modelState, setModelState] = useState(null);
   const [modelMessage, setModelMessage] = useState("");
   const [switchingProfile, setSwitchingProfile] = useState("");
+  const [modelQuery, setModelQuery] = useState("");
+  const [modelScope, setModelScope] = useState("connected");
+  const [modelProvider, setModelProvider] = useState("all");
   const [runtimeStatus, setRuntimeStatus] = useState(platformState?.runtime || null);
   const [securityPolicy, setSecurityPolicy] = useState(platformState?.securityPolicy || null);
   const [settingsMessage, setSettingsMessage] = useState("");
@@ -1477,15 +1468,15 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
     }
   };
 
-  const activateModelProfile = async (profileId) => {
-    setSwitchingProfile(profileId);
+  const activateModelProfile = async (profile) => {
+    setSwitchingProfile(profile.modelName);
     setModelMessage("");
 
     try {
       const response = await fetch("/futuretech-admin/model-profiles/activate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ profileId }),
+        body: JSON.stringify({ modelName: profile.modelName }),
       });
       const data = await response.json();
 
@@ -1559,6 +1550,36 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
       loadSecurityPolicy();
     }
   }, [visibleTab]);
+
+  const modelProviders = modelState?.providers ?? [];
+  const modelProfiles = modelState?.profiles ?? [];
+  const filteredModelProfiles = useMemo(() => {
+    const q = modelQuery.trim().toLowerCase();
+    return modelProfiles.filter((profile) => {
+      if (modelScope === "connected" && !profile.connected) return false;
+      if (modelScope === "configured" && !profile.configured) return false;
+      if (modelProvider !== "all" && profile.providerID !== modelProvider) return false;
+      if (!q) return true;
+      return [
+        profile.label,
+        profile.displayModelName,
+        profile.modelName,
+        profile.providerName,
+        profile.family,
+        profile.status,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [modelProfiles, modelProvider, modelQuery, modelScope]);
+  const visibleModelProfiles = filteredModelProfiles.slice(0, 120);
+  const currentProfile = modelProfiles.find((profile) => profile.active);
+  const providerChoices = modelProviders.filter((provider) => {
+    if (modelScope === "connected") return provider.connected;
+    if (modelScope === "configured") return provider.configured;
+    return true;
+  });
 
   return (
     <section className="base-layout">
@@ -1653,32 +1674,98 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
 
       {visibleTab === "model" && (
         <div className="model-settings">
+          <div className="model-toolbar">
+            <div className="search-box model-search">
+              <Search size={16} />
+              <input
+                value={modelQuery}
+                onChange={(event) => setModelQuery(event.target.value)}
+                placeholder="搜索模型、Provider、系列"
+              />
+            </div>
+            <label>
+              范围
+              <select value={modelScope} onChange={(event) => setModelScope(event.target.value)}>
+                <option value="connected">可切换</option>
+                <option value="configured">已配置</option>
+                <option value="all">全部模型</option>
+              </select>
+            </label>
+            <label>
+              Provider
+              <select value={modelProvider} onChange={(event) => setModelProvider(event.target.value)}>
+                <option value="all">全部 Provider</option>
+                {providerChoices.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name}（{provider.modelCount}）
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="model-overview-grid">
+            <div className="contract-box">
+              <PanelTitle icon={Cpu} title="当前模型" />
+              <SummaryLine label="模型" value={currentProfile?.displayModelName || modelState?.activeModel || "-"} />
+              <SummaryLine label="Provider" value={currentProfile?.providerName || "-"} />
+              <SummaryLine label="状态" value={currentProfile?.connected ? "可切换" : "需检查"} />
+            </div>
+            <div className="contract-box">
+              <PanelTitle icon={Network} title="模型目录" />
+              <SummaryLine label="Provider" value={`${modelState?.providerCount ?? 0} 个`} />
+              <SummaryLine label="模型" value={`${modelState?.modelCount ?? 0} 个`} />
+              <SummaryLine label="可切换 Provider" value={`${modelState?.connectedProviderCount ?? 0} 个`} />
+            </div>
+            <div className="contract-box">
+              <PanelTitle icon={ShieldCheck} title="配置写回" />
+              <SummaryLine label="配置写回" value="本机模型配置" />
+              <SummaryLine label="生效方式" value={modelState?.restartRequired ? "等待重启" : "切换后自动重启"} />
+              <SummaryLine label="当前筛选" value={`${filteredModelProfiles.length} 个`} />
+            </div>
+          </div>
+
           <div className="model-profile-grid">
-            {(modelState?.profiles ?? []).map((profile) => (
+            {visibleModelProfiles.map((profile) => (
               <article
                 className={`model-profile-card ${profile.active ? "active" : ""}`}
                 key={profile.id}
               >
                 <div className="model-profile-head">
-                  <div className={`agent-icon ${profile.id === "minimax" ? "blue" : "indigo"}`}>
+                  <div className={`agent-icon ${profile.connected ? "blue" : "slate"}`}>
                     <Server size={20} />
                   </div>
                   <div>
                     <h3>{profile.label}</h3>
-                    <span>{profile.modelName}</span>
+                    <span>{profile.displayModelName || profile.modelName}</span>
                   </div>
-                  <em>{profile.active ? "当前" : profile.available ? "可切换" : "未配置"}</em>
+                  <em>{profile.active ? "当前" : profile.available ? "可切换" : "未连接"}</em>
                 </div>
-                <p>{profile.description}</p>
+                <div className="model-meta-grid">
+                  <span>{profile.providerName}</span>
+                  <span>{profile.family || "通用"}</span>
+                  <span>{profile.limit?.context ? `${profile.limit.context.toLocaleString()} ctx` : "context -"}</span>
+                  <span>{profile.status || "catalog"}</span>
+                </div>
+                <div className="model-capability-list">
+                  {profile.capabilities?.reasoning && <span>推理</span>}
+                  {profile.capabilities?.toolcall && <span>工具调用</span>}
+                  {profile.capabilities?.imageInput && <span>图片输入</span>}
+                  {profile.capabilities?.pdfInput && <span>PDF 输入</span>}
+                  {!profile.capabilities?.reasoning &&
+                    !profile.capabilities?.toolcall &&
+                    !profile.capabilities?.imageInput &&
+                    !profile.capabilities?.pdfInput && <span>文本</span>}
+                </div>
                 <button
                   className={profile.active ? "ghost-button" : "primary-button"}
                   type="button"
-                  disabled={!profile.available || profile.active || switchingProfile === profile.id}
-                  onClick={() => activateModelProfile(profile.id)}
+                  disabled={!profile.available || profile.active || switchingProfile === profile.modelName}
+                  onClick={() => activateModelProfile(profile)}
                 >
                   {profile.active && <CheckCircle2 size={17} />}
                   {!profile.active && <RefreshCw size={17} />}
-                  {switchingProfile === profile.id
+                  {switchingProfile === profile.modelName
                     ? "切换中"
                     : profile.active
                       ? "正在使用"
@@ -1687,6 +1774,13 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
               </article>
             ))}
           </div>
+
+          {filteredModelProfiles.length > visibleModelProfiles.length && (
+            <div className="model-message">
+              <Search size={18} />
+              <span>当前筛选命中 {filteredModelProfiles.length} 个模型，已显示前 {visibleModelProfiles.length} 个；继续输入关键词可以快速定位。</span>
+            </div>
+          )}
 
           {!modelState && (
             <div className="contract-box">
@@ -1697,11 +1791,11 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
 
           <div className="contract-box">
             <PanelTitle icon={Cpu} title="当前配置" />
-            <SummaryLine label="当前模型" value={modelState?.activeModel || "-"} />
-            <SummaryLine label="可选模型" value={`${modelState?.profiles?.length ?? 0} 个`} />
+            <SummaryLine label="当前模型" value={currentProfile?.displayModelName || modelState?.activeModel || "-"} />
+            <SummaryLine label="全部模型" value={`${modelState?.modelCount ?? 0} 个`} />
             <SummaryLine
               label="生效方式"
-              value={modelState?.restartRequired ? "等待重启" : "切换后自动生效"}
+              value={modelState?.restartRequired ? "等待重启" : "切换后自动重启"}
             />
           </div>
 

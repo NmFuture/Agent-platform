@@ -47,23 +47,38 @@ const bundledPython = join(
 );
 const pythonCommand = process.env.FUTURETECH_PYTHON || (existsSync(bundledPython) ? bundledPython : "python3");
 const requestBodyLimitBytes = 80 * 1024 * 1024;
-
-const modelProfiles = [
-  {
-    id: "minimax",
-    label: "MiniMax M2.7",
-    providerID: "minimax",
-    modelID: "MiniMax-M2.7",
-    description: "默认生产模型，适合中文文字处理和通用 Agent 对话。",
-  },
-  {
-    id: "gpt54",
+const productModelCatalog = {
+  "seuapi/gpt-5.4": {
     label: "GPT-5.4",
-    providerID: "seuapi",
-    modelID: "gpt-5.4",
-    description: "备用 OpenAI 兼容网关，适合展示企业模型网关可切换能力。",
+    providerName: "SEU API",
+    description: "当前主力模型。",
+    order: 10,
   },
-];
+  "minimax/MiniMax-M2.7": {
+    label: "MiniMax M2.7",
+    providerName: "MiniMax",
+    description: "保留唯一可用的 MiniMax 模型。",
+    order: 20,
+  },
+  "siliconflow-cn/Qwen/Qwen3.5-397B-A17B": {
+    label: "Qwen3.5 满血版",
+    providerName: "硅基流动",
+    description: "千问 3.5 最大参数版本。",
+    order: 30,
+  },
+  "siliconflow-cn/Pro/moonshotai/Kimi-K2.6": {
+    label: "Kimi K2.6 满血版",
+    providerName: "硅基流动",
+    description: "Kimi K2.6 Pro 版本。",
+    order: 40,
+  },
+  "deepseek/deepseek-v4-pro": {
+    label: "DeepSeek V4 Pro",
+    providerName: "DeepSeek 官方",
+    description: "DeepSeek 官方 V4 Pro 模型。",
+    order: 50,
+  },
+};
 
 const defaultAgents = [
   {
@@ -570,27 +585,194 @@ async function listOpencodeSkills() {
   return listLocalOpencodeSkillFiles();
 }
 
-function buildModelProfileState(config) {
+async function readRuntimeProviderCatalog() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    const response = await fetch(`${target.origin}/provider`, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function configuredProviderToRuntimeShape(providerID, provider = {}) {
+  return {
+    id: providerID,
+    name: provider.name || providerID,
+    source: "config",
+    env: [],
+    options: provider.options || {},
+    models: provider.models || {},
+  };
+}
+
+function modelLimitSummary(model = {}) {
+  const limit = model.limit || {};
+  return {
+    context: limit.context || null,
+    output: limit.output || null,
+  };
+}
+
+function modelCapabilitySummary(model = {}) {
+  const capabilities = model.capabilities || {};
+  return {
+    reasoning: Boolean(capabilities.reasoning),
+    toolcall: Boolean(capabilities.toolcall),
+    attachment: Boolean(capabilities.attachment),
+    imageInput: Boolean(capabilities.input?.image),
+    pdfInput: Boolean(capabilities.input?.pdf),
+    audioInput: Boolean(capabilities.input?.audio),
+    videoInput: Boolean(capabilities.input?.video),
+  };
+}
+
+function filterProviderCatalogForProduct(catalog) {
+  if (!catalog || typeof catalog !== "object") return catalog;
+  const allowedByProvider = new Map();
+  for (const [modelName, meta] of Object.entries(productModelCatalog)) {
+    const slash = modelName.indexOf("/");
+    if (slash < 0) continue;
+    const providerID = modelName.slice(0, slash);
+    const modelID = modelName.slice(slash + 1);
+    if (!allowedByProvider.has(providerID)) allowedByProvider.set(providerID, new Map());
+    allowedByProvider.get(providerID).set(modelID, meta);
+  }
+
+  const filterProvider = (provider) => {
+    const allowedModels = allowedByProvider.get(provider?.id);
+    if (!provider || !allowedModels) return null;
+    const models = {};
+    for (const [modelID, model] of Object.entries(provider.models || {})) {
+      const productModel = allowedModels.get(modelID);
+      if (!productModel) continue;
+      models[modelID] = {
+        ...model,
+        name: productModel.label || model.name || modelID,
+      };
+    }
+    if (Object.keys(models).length === 0) return null;
+    const providerDisplayName = [...allowedModels.values()].find((item) => item.providerName)?.providerName;
+    return {
+      ...provider,
+      name: providerDisplayName || provider.name,
+      models,
+    };
+  };
+
+  const all = (Array.isArray(catalog.all) ? catalog.all : [])
+    .map(filterProvider)
+    .filter(Boolean);
+  const allowedProviderIDs = new Set(all.map((provider) => provider.id));
+  return {
+    ...catalog,
+    all,
+    default: Object.fromEntries(all.map((provider) => [provider.id, provider])),
+    connected: (Array.isArray(catalog.connected) ? catalog.connected : []).filter((providerID) =>
+      allowedProviderIDs.has(providerID)
+    ),
+  };
+}
+
+async function buildModelProfileState(config) {
   const activeModel = config.model || "";
+  const catalog = await readRuntimeProviderCatalog();
+  const connectedProviders = new Set(Array.isArray(catalog?.connected) ? catalog.connected : []);
+  const providerMap = new Map();
+
+  for (const provider of Array.isArray(catalog?.all) ? catalog.all : []) {
+    if (provider?.id) providerMap.set(provider.id, provider);
+  }
+
+  for (const [providerID, provider] of Object.entries(config.provider || {})) {
+    if (!providerMap.has(providerID)) {
+      providerMap.set(providerID, configuredProviderToRuntimeShape(providerID, provider));
+    }
+  }
+
+  const profiles = [];
+  const providers = [];
+
+  for (const [providerID, provider] of providerMap.entries()) {
+    const configuredProvider = config.provider?.[providerID];
+    const models = provider.models || {};
+    const modelEntries = Object.entries(models);
+    const connected = connectedProviders.has(providerID) || provider.source === "config" || Boolean(configuredProvider);
+    const providerProfiles = [];
+    const providerName = rewriteFutureTechText(provider.name || configuredProvider?.name || providerID);
+    const baseURL = provider.options?.baseURL || configuredProvider?.options?.baseURL || "";
+    const apiKeyMasked = maskSecret(provider.options?.apiKey || configuredProvider?.options?.apiKey || "");
+
+    for (const [modelID, model] of modelEntries) {
+      const modelName = `${providerID}/${modelID}`;
+      const productModel = productModelCatalog[modelName];
+      if (!productModel) continue;
+      providerProfiles.push({
+        id: modelName,
+        label: productModel.label || rewriteFutureTechText(model.name || modelID),
+        providerID,
+        providerName: productModel.providerName || providerName,
+        providerSource: provider.source || (configuredProvider ? "config" : "catalog"),
+        modelID,
+        modelName,
+        displayModelName: rewriteFutureTechText(modelName),
+        family: model.family || "",
+        status: model.status || "",
+        releaseDate: model.release_date || model.releaseDate || "",
+        description: productModel.description || model.description || "",
+        order: productModel.order || 999,
+        active: activeModel === modelName,
+        available: connected,
+        connected,
+        configured: Boolean(configuredProvider),
+        baseURL,
+        apiKeyMasked,
+        limit: modelLimitSummary(model),
+        capabilities: modelCapabilitySummary(model),
+      });
+    }
+
+    if (providerProfiles.length === 0) continue;
+    providers.push({
+      id: providerID,
+      name: providerProfiles[0]?.providerName || providerName,
+      source: provider.source || (configuredProvider ? "config" : "catalog"),
+      configured: Boolean(configuredProvider),
+      connected,
+      available: connected,
+      modelCount: providerProfiles.length,
+      baseURL,
+      apiKeyMasked,
+    });
+    profiles.push(...providerProfiles);
+  }
+
+  providers.sort((left, right) => {
+    const rank = (provider) => (provider.connected ? 0 : 1) + (provider.configured ? -1 : 0);
+    return rank(left) - rank(right) || left.name.localeCompare(right.name);
+  });
+
+  profiles.sort((left, right) => {
+    const rank = (profile) =>
+      (profile.active ? -10 : 0) +
+      (profile.available ? 0 : 20) +
+      (profile.configured ? -2 : 0);
+    return rank(left) - rank(right) || (left.order || 999) - (right.order || 999) || left.providerName.localeCompare(right.providerName) || left.label.localeCompare(right.label);
+  });
 
   return {
     activeModel,
     restartRequired: false,
-    profiles: modelProfiles.map((profile) => {
-      const provider = config.provider?.[profile.providerID];
-      const model = provider?.models?.[profile.modelID];
-      const modelName = `${profile.providerID}/${profile.modelID}`;
-
-      return {
-        ...profile,
-        modelName,
-        active: activeModel === modelName,
-        available: Boolean(provider && model),
-        baseURL: provider?.options?.baseURL || "",
-        apiKeyMasked: maskSecret(provider?.options?.apiKey || ""),
-        providerName: provider?.name || profile.providerID,
-      };
-    }),
+    catalogSource: catalog ? "runtime-provider" : "config",
+    providerCount: providers.length,
+    modelCount: profiles.length,
+    connectedProviderCount: providers.filter((provider) => provider.connected).length,
+    configuredProviderCount: providers.filter((provider) => provider.configured).length,
+    providers,
+    profiles,
   };
 }
 
@@ -1215,10 +1397,11 @@ async function buildRuntimeStatus() {
   ]);
   let modelState = { activeModel: "", profiles: [] };
   try {
-    modelState = buildModelProfileState(readOpencodeConfig());
+    modelState = await buildModelProfileState(readOpencodeConfig());
   } catch {
     // Missing local config should not break the runtime status page.
   }
+  const activeProfile = modelState.profiles?.find((profile) => profile.active);
 
   return {
     target: target.origin,
@@ -1230,7 +1413,7 @@ async function buildRuntimeStatus() {
       { id: "proxy", name: "FutureTech Console Proxy", port, healthy: proxyPids.length > 0, pids: proxyPids },
       { id: "web", name: "AgentOS Web", port: 5174, healthy: webPids.length > 0, pids: webPids },
     ],
-    model: modelState.activeModel,
+    model: activeProfile?.displayModelName || rewriteFutureTechText(modelState.activeModel),
     skillCount: skills.count || 0,
     sessionCount: Array.isArray(sessions) ? sessions.length : 0,
     fullConsoleProxy: true,
@@ -1560,7 +1743,7 @@ async function handleAdmin(req, res) {
 
   if (url.pathname === "/futuretech-admin/model-profiles" && req.method === "GET") {
     try {
-      sendJson(res, 200, buildModelProfileState(readOpencodeConfig()));
+      sendJson(res, 200, await buildModelProfileState(readOpencodeConfig()));
     } catch (error) {
       sendJson(res, 500, { error: "Failed to read model profiles", detail: error.message });
     }
@@ -1573,30 +1756,44 @@ async function handleAdmin(req, res) {
   ) {
     try {
       const body = await readRequestJson(req);
-      const profile = modelProfiles.find((item) => item.id === body.profileId);
+      const config = readOpencodeConfig();
+      const modelState = await buildModelProfileState(config);
+      const legacyModelName =
+        body.profileId === "minimax"
+          ? "minimax/MiniMax-M2.7"
+          : body.profileId === "gpt54"
+            ? "seuapi/gpt-5.4"
+            : "";
+      const requestedModelName = body.modelName || legacyModelName || body.profileId || "";
+      const profile = modelState.profiles.find((item) => item.id === requestedModelName || item.modelName === requestedModelName);
 
       if (!profile) {
-        sendJson(res, 404, { error: "Unknown model profile" });
+        sendJson(res, 404, { error: "Unknown model profile", modelName: requestedModelName });
         return true;
       }
 
-      const config = readOpencodeConfig();
-      const provider = config.provider?.[profile.providerID];
-      const model = provider?.models?.[profile.modelID];
-
-      if (!provider || !model) {
+      if (!profile.available) {
         sendJson(res, 400, {
-          error: "Model profile is not configured",
-          profileId: profile.id,
+          error: "Model provider is not connected",
+          modelName: profile.modelName,
         });
         return true;
       }
 
-      config.model = `${profile.providerID}/${profile.modelID}`;
+      if (config.provider?.[profile.providerID]) {
+        config.provider[profile.providerID].models = {
+          ...(config.provider[profile.providerID].models || {}),
+          [profile.modelID]: {
+            name: profile.label || profile.modelID,
+          },
+        };
+      }
+
+      config.model = profile.modelName;
       writeOpencodeConfig(config);
       const runtime = await restartRuntime();
       sendJson(res, 200, {
-        ...buildModelProfileState(config),
+        ...(await buildModelProfileState(config)),
         restartRequired: !runtime.ready,
         runtimeRestarted: runtime.ready,
         runtime,
@@ -1630,6 +1827,14 @@ async function forward(req, res) {
   }
 
   const upstreamUrl = new URL(req.url || "/", target);
+  if (req.method === "GET" && upstreamUrl.pathname === "/provider") {
+    const catalog = await readRuntimeProviderCatalog();
+    if (catalog) {
+      sendJson(res, 200, filterProviderCatalogForProduct(catalog));
+      return;
+    }
+  }
+
   const headers = {
     ...req.headers,
     host: target.host,

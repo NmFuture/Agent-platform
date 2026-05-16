@@ -383,6 +383,11 @@ a.text-button {
   color: #be123c;
 }
 
+.agent-icon.slate {
+  background: #e2e8f0;
+  color: #475569;
+}
+
 .agent-card-main {
   min-height: 92px;
 }
@@ -835,6 +840,48 @@ a.text-button {
   gap: 12px;
 }
 
+.model-toolbar {
+  padding: 14px;
+  border: 1px solid #dfe6f2;
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(140px, 180px) minmax(180px, 260px);
+  gap: 12px;
+  align-items: end;
+}
+
+.model-toolbar label {
+  display: grid;
+  gap: 7px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.model-toolbar select {
+  min-width: 0;
+  height: 36px;
+  border: 1px solid #d8dfec;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.model-search {
+  width: 100%;
+  height: 36px;
+  box-shadow: none;
+}
+
+.model-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .model-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -895,6 +942,43 @@ a.text-button {
   color: #64748b;
   line-height: 1.6;
   font-size: 14px;
+}
+
+.model-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.model-meta-grid span {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.model-capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.model-capability-list span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .model-summary {
@@ -1458,15 +1542,11 @@ a.text-button {
 }
 
 .skill-source-bar {
-  min-height: 78px;
+  min-height: 64px;
   padding: 16px 18px;
   border: 1px solid #dfe6f2;
   border-radius: 8px;
   background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
 }
 
 .skill-source-bar span {
@@ -1481,16 +1561,6 @@ a.text-button {
   margin-top: 3px;
   color: #17202a;
   font-size: 20px;
-}
-
-.skill-source-bar p {
-  margin: 0;
-  max-width: 52%;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
 .skill-search-panel {
@@ -1748,40 +1818,6 @@ a.text-button {
   color: #1d4ed8;
   border-color: #b8c9ff;
   background: #eef4ff;
-}
-
-.skill-root-list {
-  display: grid;
-  gap: 10px;
-}
-
-.skill-root-list div {
-  padding: 12px;
-  border: 1px solid #dfe6f2;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.skill-root-list div.active {
-  background: #eef4ff;
-  border-color: #b8c9ff;
-}
-
-.skill-root-list strong,
-.skill-root-list span {
-  display: block;
-}
-
-.skill-root-list strong {
-  color: #17202a;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-
-.skill-root-list span {
-  margin-top: 5px;
-  color: #64748b;
-  font-size: 12px;
 }
 
 .builder-steps {
@@ -2475,7 +2511,6 @@ body {
 .skill-card,
 .skill-source-bar,
 .empty-state,
-.skill-root-list div,
 .builder-form,
 .orchestration-panel,
 .brand-preview,

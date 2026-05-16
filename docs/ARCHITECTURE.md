@@ -37,7 +37,7 @@ FutureTech Runtime (4096)
 | --- | --- | --- |
 | Agent | `id`, `name`, `rolePrompt`, `skills`, `knowledgeBases`, `permissions`, `outputPolicy` | 有身份和边界的业务智能体 |
 | Skill | `id`, `name`, `description`, `version`, `sourceRoot`, `path` | 从 Runtime `/skill` 读取 |
-| Run | `id`, `agentId`, `status`, `steps`, `events`, `artifacts`, `exitCode` | 一次真实任务执行 |
+| Run | `id`, `agentId`, `status`, `steps`, `events`, `artifacts`, `exitCode` | 一次任务执行 |
 | Artifact | `type`, `name`, `path` | 当前主要是 Runtime JSONL 日志 |
 | AuditEvent | `time`, `user`, `action`, `target` | 保存关键管理和运行事件 |
 | SecurityPolicy | `runtimeConsole`, `defaultRunMode`, `rules` | 控制 Console 完整能力和业务 Agent 边界 |
@@ -65,7 +65,7 @@ FutureTech Runtime (4096)
 - 不得切断文件、终端、Skill、MCP、项目上下文和会话能力。
 - 不得为品牌展示改写 Console 的 HTML、JavaScript、JSON、SSE 或 WebSocket 内容。
 - 品牌隔离只做在 AgentOS 外壳页面和平台文档，不动完整 Console 协议。
-- 前端展示 Skill registry 时只显示 FutureTech Registry，不展示本机内部目录路径。
+- 前端展示 Skill registry 时不展示本机内部目录路径或来源编号。
 
 ## 安全策略
 
