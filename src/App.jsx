@@ -40,6 +40,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
+import brandLogo from "./assets/brand-logo.svg";
 import {
   agents as seedAgents,
   auditEvents,
@@ -60,6 +61,10 @@ const navItems = [
   { id: "custom", label: "定制中心", icon: SlidersHorizontal },
   { id: "settings", label: "设置", icon: Settings },
 ];
+
+const topNavItems = ["Agent 矩阵", "解决方案", "能力市场", "帮助中心"];
+
+const promptSuggestions = ["生成销售周报", "合同风险识别", "客户交付复盘", "市场趋势分析"];
 
 const statusMap = {
   done: { label: "完成", icon: CheckCircle2 },
@@ -357,12 +362,10 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <div className="brand-mark">
-            <Bot size={20} />
-          </div>
+          <img className="brand-logo" src={brandLogo} alt="宁梦未来" />
           <div>
-            <div className="brand-title">AgentOS</div>
-            <div className="brand-subtitle">Enterprise AI v2.4</div>
+            <div className="brand-title">宁梦未来</div>
+            <div className="brand-subtitle">AgentOS 企业AI操作系统</div>
           </div>
         </div>
 
@@ -383,16 +386,49 @@ function App() {
           })}
         </nav>
 
+        <div className="edition-card">
+          <div className="edition-icon">
+            <ShieldCheck size={18} />
+          </div>
+          <strong>企业版</strong>
+          <span>安全、稳定、专属支持</span>
+          <button className="edition-link" type="button">
+            升级方案
+            <ArrowRight size={13} />
+          </button>
+        </div>
       </aside>
 
       <main className="main-panel">
-        <section className="page-title">
-          <div>
-            <p className="eyebrow">{meta.eyebrow}</p>
-            <h1>{meta.title}</h1>
-            <p>{meta.subtitle}</p>
+        <header className="app-topbar">
+          <nav className="top-nav" aria-label="顶部导航">
+            {topNavItems.map((item) => (
+              <button key={item} type="button">
+                {item}
+              </button>
+            ))}
+          </nav>
+          <div className="account-menu">
+            <span className="topbar-divider" aria-hidden="true" />
+            <button className="avatar-chip" type="button" aria-label="当前用户">
+              DZ
+            </button>
+            <button className="account-name" type="button">
+              Dr. Zero
+              <ArrowRight size={14} />
+            </button>
           </div>
-        </section>
+        </header>
+
+        {view !== "dashboard" && (
+          <section className="page-title">
+            <div>
+              <p className="eyebrow">{meta.eyebrow}</p>
+              <h1>{meta.title}</h1>
+              <p>{meta.subtitle}</p>
+            </div>
+          </section>
+        )}
 
         {view === "dashboard" && (
           <Dashboard
@@ -481,13 +517,13 @@ function Dashboard({
     <section className="dashboard-grid customer-dashboard">
       <article className="command-panel">
         <div className="command-copy">
-          <span className="tiny-chip">统一工作台</span>
-          <h2>企业任务入口</h2>
+          <h2>宁梦相伴，未来已来</h2>
           <p>
-            使用自然语言发起任务，也可以从 Agent 市场选择业务智能体，并按组织流程绑定 Skill、知识库和审批规则。
+            从一个入口进入通用智能体、业务智能体和企业能力市场。
           </p>
         </div>
         <div className="command-box">
+          <Sparkles className="command-spark" size={24} />
           <input
             aria-label="输入指令"
             placeholder="输入任务，例如：生成本周客户交付复盘..."
@@ -496,6 +532,16 @@ function Dashboard({
             <Sparkles size={16} />
             执行指令
           </button>
+        </div>
+        <div className="prompt-suggestions" aria-label="快捷任务">
+          <button className="suggestion-orb" type="button" aria-label="智能推荐">
+            <Sparkles size={17} />
+          </button>
+          {promptSuggestions.map((suggestion) => (
+            <button key={suggestion} type="button" onClick={onOpenGeneral}>
+              {suggestion}
+            </button>
+          ))}
         </div>
       </article>
 
