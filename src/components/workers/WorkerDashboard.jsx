@@ -15,12 +15,15 @@ import {
   Link2,
   ListTodo,
   Mail,
+  Megaphone,
   MessageSquare,
+  Microscope,
   PenTool,
   Plus,
   Puzzle,
   Search,
   Settings,
+  Scale,
   Shield,
   Sparkles,
   Timer,
@@ -28,11 +31,26 @@ import {
   UserRound,
   WalletCards,
   Zap,
+  FolderOpen,
+  Headphones,
 } from "lucide-react";
 import { createWorker, deleteWorker, getWorkerOverview, listWorkerPresets, listWorkers, updateWorker } from "../../api/workerApi";
 import WorkerProfileDialog, { emptyWorkerDraft } from "./WorkerProfileDialog";
 
-const iconMap = { Bot, FileText, PenTool, Briefcase, Mail, Code, Settings };
+const iconMap = {
+  Bot,
+  FileText,
+  PenTool,
+  Briefcase,
+  Mail,
+  Code,
+  Settings,
+  Microscope,
+  Scale,
+  Megaphone,
+  FolderOpen,
+  Headphones,
+};
 const colorMap = {
   blue: "#1d4ed8",
   teal: "#0f766e",

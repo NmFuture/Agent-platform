@@ -400,6 +400,8 @@ const skillDisplayNames = {
   "officecli": "Office 文档处理",
   "lark-wiki": "飞书知识库",
   "lark-markdown": "飞书 Markdown",
+  "aihot": "AI 资讯调研",
+  "lark-calendar": "飞书日历",
 };
 
 function displaySkillName(skillId) {
@@ -2112,84 +2114,85 @@ async function handleAdmin(req, res) {
     writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
   }
 
+  const WORKER_PRESET_VERSION = 3;
   const WORKER_PRESETS = [
     {
-      id: "worker-preset-contract-reviewer",
-      name: "合同审查官",
-      employeeType: "合同风控",
-      avatar: "FileText",
-      color: "teal",
-      description: "负责合同条款抽取、风险识别、付款节点和交付义务核对。",
-      skills: ["contract-e2e-excel", "lark-doc", "lark-sheets"],
-      capabilities: ["合同 PDF 结构化抽取", "付款与违约条款识别", "风险点归纳与复核清单", "Excel 结果交付"],
-      workStyles: ["先抽取事实，再输出风险判断", "高风险条款必须给出依据", "结果默认适合商务和法务复核"],
-      deliveryCommitments: ["输出条款摘要、风险清单和待人工确认项", "不确定条款标记为需复核", "保留产物路径和抽取统计"],
-      serviceTargets: ["法务", "商务", "项目交付"],
-    },
-    {
       id: "worker-preset-bid-specialist",
-      name: "投标材料专员",
-      employeeType: "标书助理",
-      avatar: "Briefcase",
-      color: "amber",
-      description: "负责投标文件整理、技术/商务响应、附件清单和交付材料组装。",
-      skills: ["bid-assembler", "lark-doc", "lark-drive", "lark-sheets"],
-      capabilities: ["标书目录和附件清单整理", "商务响应材料汇总", "技术方案初稿生成", "多文档交付检查"],
-      workStyles: ["先核对招标要求，再组织材料", "缺失附件必须显式标记", "输出适合进一步人工精修"],
-      deliveryCommitments: ["输出材料清单、缺口清单和组装建议", "保持原始依据可追踪", "避免编造资质或业绩"],
-      serviceTargets: ["售前", "商务", "交付团队"],
-    },
-    {
-      id: "worker-preset-meeting-assistant",
-      name: "会议纪要助理",
-      employeeType: "会议运营",
-      avatar: "PenTool",
+      name: "投标数字员工",
+      employeeType: "投标助理",
+      avatar: "FileText",
       color: "blue",
-      description: "负责会议记录整理、待办提炼、参会信息回顾和周报素材沉淀。",
-      skills: ["lark-minutes", "lark-vc", "lark-workflow-meeting-summary", "lark-task"],
-      capabilities: ["会议纪要提炼", "行动项拆解", "参会记录回顾", "周报素材整理"],
-      workStyles: ["先按时间线还原事实，再提炼结论", "待办必须包含负责人和时间线", "对争议事项保留原始表述"],
-      deliveryCommitments: ["输出纪要摘要、待办列表和风险提醒", "会议事实与个人判断分开写", "重要待办可同步到任务系统"],
-      serviceTargets: ["项目经理", "管理层", "运营团队"],
-    },
-    {
-      id: "worker-preset-lark-ops",
-      name: "飞书流程管家",
-      employeeType: "协同运营",
-      avatar: "Settings",
-      color: "purple",
-      description: "负责飞书审批、任务、群消息、Base 表格和跨部门流程协同。",
-      skills: ["lark-approval", "lark-task", "lark-base", "lark-im"],
-      capabilities: ["审批流查询与提醒", "任务创建和跟踪", "多维表格记录管理", "群消息通知与协同"],
-      workStyles: ["先确认操作对象和权限边界", "涉及通知或审批必须明确收件人", "保留每次流程动作的结果"],
-      deliveryCommitments: ["输出流程状态、下一步动作和异常原因", "不擅自发送敏感通知", "关键操作前提示人工确认"],
-      serviceTargets: ["行政", "项目管理", "业务运营"],
+      description: "招标解析、模板匹配、资料检索、标书生成",
+      skills: ["bid-assembler", "lark-doc", "lark-drive", "lark-sheets"],
+      capabilities: ["招标文件解析", "标书模板匹配", "资质与案例资料检索", "投标文件初稿生成"],
+      workStyles: ["先提取招标要求，再匹配材料模板", "缺失资质、案例或附件必须显式标记", "输出适合售前继续精修的标书草稿"],
+      deliveryCommitments: ["输出招标要点、响应目录和材料缺口清单", "保留引用来源和附件路径", "不编造资质、业绩或承诺"],
+      serviceTargets: ["售前", "商务", "投标团队"],
     },
     {
       id: "worker-preset-data-analyst",
-      name: "数据分析员",
-      employeeType: "经营分析",
-      avatar: "Code",
+      name: "科研数字员工",
+      employeeType: "科研助理",
+      avatar: "Microscope",
+      color: "teal",
+      description: "文献调研、项目申报、论文辅助、数据分析",
+      skills: ["aihot", "lark-doc", "lark-sheets", "officecli"],
+      capabilities: ["文献和资讯调研", "项目申报材料整理", "论文结构和表达辅助", "科研数据分析"],
+      workStyles: ["先明确研究问题和资料范围", "事实、引用和推断分开呈现", "数据结论必须说明口径和假设"],
+      deliveryCommitments: ["输出调研摘要、材料框架和数据结论", "不伪造论文、数据或引用来源", "标记需要人工复核的学术判断"],
+      serviceTargets: ["科研团队", "高校教师", "项目申报人员"],
+    },
+    {
+      id: "worker-preset-contract-reviewer",
+      name: "合同数字员工",
+      employeeType: "合同风控",
+      avatar: "Scale",
       color: "green",
-      description: "负责表格数据清洗、经营指标分析、异常识别和报告素材整理。",
-      skills: ["lark-sheets", "lark-base", "officecli"],
-      capabilities: ["表格数据读取与清洗", "指标口径整理", "异常数据识别", "分析结论摘要"],
-      workStyles: ["先确认口径，再做计算", "结论必须回到数据依据", "异常值单独列出并建议复核"],
-      deliveryCommitments: ["输出指标摘要、异常列表和下一步建议", "不把估算当真实数据", "保留计算假设"],
-      serviceTargets: ["经营管理", "财务", "业务负责人"],
+      description: "合同审查、风险识别、修改建议、合规清单",
+      skills: ["contract-e2e-excel", "lark-doc", "lark-sheets"],
+      capabilities: ["合同条款审查", "风险条款识别", "修改建议生成", "合规清单整理"],
+      workStyles: ["先抽取合同事实，再输出风险判断", "高风险条款必须给出依据", "修改建议保持可执行、可复核"],
+      deliveryCommitments: ["输出条款摘要、风险清单和修改建议", "不确定条款标记为需复核", "保留原文位置和审查依据"],
+      serviceTargets: ["法务", "商务", "项目交付"],
     },
     {
       id: "worker-preset-knowledge-manager",
-      name: "知识库管理员",
-      employeeType: "知识运营",
-      avatar: "Bot",
+      name: "营销数字员工",
+      employeeType: "营销助理",
+      avatar: "Megaphone",
+      color: "amber",
+      description: "客户画像、销售话术、宣传文案、活动策划",
+      skills: ["lark-doc", "lark-sheets", "lark-drive", "lark-im"],
+      capabilities: ["客户画像整理", "销售话术生成", "宣传文案撰写", "营销活动策划"],
+      workStyles: ["先明确目标客群和转化目标", "文案保持品牌口径和事实边界", "活动方案包含渠道、节奏和物料清单"],
+      deliveryCommitments: ["输出客户画像、话术、文案和活动草案", "不夸大产品能力或客户案例", "标记需要市场负责人确认的内容"],
+      serviceTargets: ["市场", "销售", "品牌团队"],
+    },
+    {
+      id: "worker-preset-meeting-assistant",
+      name: "运营数字员工",
+      employeeType: "运营助理",
+      avatar: "FolderOpen",
+      color: "purple",
+      description: "会议纪要、任务拆解、日报周报、知识归档",
+      skills: ["lark-minutes", "lark-vc", "lark-workflow-meeting-summary", "lark-task", "lark-wiki"],
+      capabilities: ["会议纪要整理", "任务拆解和跟踪", "日报周报生成", "知识归档维护"],
+      workStyles: ["先按时间线还原事实，再提炼结论", "待办必须包含负责人、时间和状态", "知识归档优先保证可检索、可复用"],
+      deliveryCommitments: ["输出纪要摘要、任务清单和周报素材", "会议事实与个人判断分开写", "重要待办可同步到任务系统"],
+      serviceTargets: ["运营", "项目经理", "管理层"],
+    },
+    {
+      id: "worker-preset-lark-ops",
+      name: "客服数字员工",
+      employeeType: "客服助理",
+      avatar: "Headphones",
       color: "rose",
-      description: "负责企业知识沉淀、文档整理、知识库结构维护和复用内容提炼。",
-      skills: ["lark-wiki", "lark-doc", "lark-drive", "lark-markdown"],
-      capabilities: ["知识库目录整理", "文档摘要和标签生成", "资料归档建议", "复用模板沉淀"],
-      workStyles: ["先梳理结构，再补充内容", "重复知识合并，冲突知识标记", "输出面向复用而非堆砌"],
-      deliveryCommitments: ["输出知识结构、摘要和待补充项", "保留来源文档引用", "适合后续进入 Wiki 或文档库"],
-      serviceTargets: ["交付团队", "产品团队", "运营团队"],
+      description: "FAQ生成、客户问答、工单流转、售后回访",
+      skills: ["lark-doc", "lark-base", "lark-task", "lark-im"],
+      capabilities: ["FAQ 生成和维护", "客户问答辅助", "工单流转跟进", "售后回访记录"],
+      workStyles: ["先识别客户问题类型和紧急程度", "回答保持清晰、礼貌、可追踪", "涉及承诺、退款或敏感问题需人工确认"],
+      deliveryCommitments: ["输出 FAQ、答复建议、工单状态和回访摘要", "不擅自承诺超出政策范围的处理方案", "保留客户问题和处理动作记录"],
+      serviceTargets: ["客服", "售后", "客户成功"],
     },
   ];
 
@@ -2237,25 +2240,39 @@ async function handleAdmin(req, res) {
     const now = new Date().toISOString();
     let changed = false;
 
-    for (const preset of WORKER_PRESETS) {
+    for (const [presetIndex, preset] of WORKER_PRESETS.entries()) {
       if (disabled.has(preset.id)) continue;
-      if (readWorkerMeta(preset.id)) continue;
+      const existingMeta = readWorkerMeta(preset.id);
+      if (existingMeta && !existingMeta.preset) continue;
 
       const markdowns = workerPresetMarkdowns(preset);
       const meta = {
+        ...(existingMeta || {}),
         id: preset.id,
         name: preset.name,
         avatar: preset.avatar,
         color: preset.color,
         description: preset.description,
-        model: null,
+        model: existingMeta?.model || null,
         employeeType: preset.employeeType,
         skills: preset.skills,
         skillLabels: (preset.skills || []).map(displaySkillName),
         preset: true,
-        createdAt: now,
-        updatedAt: now,
+        presetOrder: presetIndex,
+        presetVersion: WORKER_PRESET_VERSION,
+        createdAt: existingMeta?.createdAt || now,
+        updatedAt: existingMeta?.presetVersion === WORKER_PRESET_VERSION ? existingMeta?.updatedAt || now : now,
       };
+      const needsSync =
+        !existingMeta ||
+        existingMeta.presetVersion !== WORKER_PRESET_VERSION ||
+        existingMeta.name !== meta.name ||
+        existingMeta.description !== meta.description ||
+        existingMeta.employeeType !== meta.employeeType ||
+        existingMeta.presetOrder !== meta.presetOrder ||
+        JSON.stringify(existingMeta.skills || []) !== JSON.stringify(meta.skills || []);
+      if (!needsSync) continue;
+
       const { qoderDir } = loadWorkerDir(preset.id);
       writeWorkerMeta(preset.id, meta);
       writeWorkerMarkdown(qoderDir, "IDENTITY.md", markdowns.identity);
@@ -2305,10 +2322,18 @@ async function handleAdmin(req, res) {
     mkdirSync(workersDir, { recursive: true });
     seedDefaultWorker();
     seedPresetWorkers();
+    const presetOrder = new Map(WORKER_PRESETS.map((preset, index) => [preset.id, index]));
     const dirs = readdirSync(workersDir).filter((d) => {
       try { return statSync(join(workersDir, d)).isDirectory(); } catch { return false; }
     });
-    return dirs.map((id) => readWorkerMeta(id)).filter(Boolean).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+    return dirs.map((id) => readWorkerMeta(id)).filter(Boolean).sort((a, b) => {
+      const leftPresetOrder = presetOrder.get(a.id);
+      const rightPresetOrder = presetOrder.get(b.id);
+      if (leftPresetOrder !== undefined && rightPresetOrder !== undefined) return leftPresetOrder - rightPresetOrder;
+      if (leftPresetOrder !== undefined) return -1;
+      if (rightPresetOrder !== undefined) return 1;
+      return (b.updatedAt || "").localeCompare(a.updatedAt || "");
+    });
   }
 
   function dateKey(value) {

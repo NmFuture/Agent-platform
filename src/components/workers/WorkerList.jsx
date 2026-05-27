@@ -1,7 +1,34 @@
 import React from "react";
-import { Plus, Bot, FileText, PenTool, Briefcase, Mail, Code, Settings, ExternalLink } from "lucide-react";
+import {
+  Plus,
+  Bot,
+  FileText,
+  PenTool,
+  Briefcase,
+  Mail,
+  Code,
+  Settings,
+  Microscope,
+  Scale,
+  Megaphone,
+  FolderOpen,
+  Headphones,
+} from "lucide-react";
 
-const iconMap = { Bot, FileText, PenTool, Briefcase, Mail, Code, Settings };
+const iconMap = {
+  Bot,
+  FileText,
+  PenTool,
+  Briefcase,
+  Mail,
+  Code,
+  Settings,
+  Microscope,
+  Scale,
+  Megaphone,
+  FolderOpen,
+  Headphones,
+};
 const colorMap = {
   blue: "#3b82f6", teal: "#14b8a6", green: "#22c55e",
   amber: "#f59e0b", purple: "#a855f7", rose: "#f43f5e",

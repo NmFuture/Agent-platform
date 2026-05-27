@@ -1,5 +1,35 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, X } from "lucide-react";
+import {
+  Bot,
+  Briefcase,
+  Code,
+  FileText,
+  FolderOpen,
+  Headphones,
+  Mail,
+  Megaphone,
+  Microscope,
+  PenTool,
+  Scale,
+  Settings,
+  Trash2,
+  X,
+} from "lucide-react";
+
+const iconMap = {
+  Bot,
+  FileText,
+  PenTool,
+  Briefcase,
+  Mail,
+  Code,
+  Settings,
+  Microscope,
+  Scale,
+  Megaphone,
+  FolderOpen,
+  Headphones,
+};
 
 export function emptyWorkerDraft(worker = null) {
   return {
@@ -68,17 +98,27 @@ export default function WorkerProfileDialog({
               </div>
               <div className="employee-template-grid">
                 {presets.map((preset) => (
-                  <button
-                    className={`employee-template-card ${draft.templateId === preset.id ? "active" : ""}`}
-                    key={preset.id}
-                    type="button"
-                    onClick={() => onApplyPreset?.(preset)}
-                  >
-                    <strong>{preset.name}</strong>
-                    <span>{preset.employeeType}</span>
-                    <p>{preset.description}</p>
-                    <em>{(preset.skillLabels || preset.skills || []).slice(0, 3).join("、") || "待绑定技能"}</em>
-                  </button>
+                  (() => {
+                    const Icon = iconMap[preset.avatar] || Bot;
+                    return (
+                      <button
+                        className={`employee-template-card ${draft.templateId === preset.id ? "active" : ""}`}
+                        key={preset.id}
+                        type="button"
+                        onClick={() => onApplyPreset?.(preset)}
+                      >
+                        <span className="employee-template-icon" aria-hidden="true">
+                          <Icon size={24} />
+                        </span>
+                        <span className="employee-template-copy">
+                          <strong>{preset.name}</strong>
+                          <small>{preset.employeeType}</small>
+                          <p>{preset.description}</p>
+                          <em>{(preset.skillLabels || preset.skills || []).slice(0, 3).join("、") || "待绑定技能"}</em>
+                        </span>
+                      </button>
+                    );
+                  })()
                 ))}
               </div>
             </div>
@@ -89,7 +129,7 @@ export default function WorkerProfileDialog({
               autoFocus
               value={draft.name}
               onChange={(event) => onChange("name", event.target.value)}
-              placeholder="例如：合同审查官、投标材料专员"
+              placeholder="例如：投标数字员工、合同数字员工"
               maxLength={32}
             />
           </label>
@@ -98,7 +138,7 @@ export default function WorkerProfileDialog({
             <input
               value={draft.employeeType}
               onChange={(event) => onChange("employeeType", event.target.value)}
-              placeholder="例如：合同风控、标书助理、数据分析"
+              placeholder="例如：投标助理、科研助理、客服助理"
               maxLength={40}
             />
           </label>
