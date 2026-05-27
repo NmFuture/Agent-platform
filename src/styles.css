@@ -6652,3 +6652,1182 @@ button {
     font-size: 26px;
   }
 }
+
+/* Claude-inspired FutureTech editorial skin */
+:root {
+  --bg: #f4eee4;
+  --panel: #fffaf1;
+  --panel-soft: #f7f0e6;
+  --line: #ded3c3;
+  --line-strong: #c6b7a6;
+  --text: #241f19;
+  --muted: #756b5f;
+  --blue: #b45d3d;
+  --blue-strong: #8f3f26;
+  --teal: #60735f;
+  --green: #60735f;
+  --amber: #a06a2a;
+  --clay: #b45d3d;
+  --clay-dark: #7f3b28;
+  --ink: #1f1c18;
+  --paper: #fffaf1;
+  --sage: #60735f;
+  --shadow-sm: 0 1px 0 rgba(36, 31, 25, 0.05);
+  --shadow-md: 0 20px 46px rgba(43, 34, 24, 0.12);
+  --shadow-glow: 0 22px 54px rgba(94, 67, 42, 0.16);
+  font-family:
+    "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  color: var(--text);
+  background:
+    linear-gradient(rgba(79, 66, 50, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 66, 50, 0.026) 1px, transparent 1px),
+    #f4eee4;
+  background-size: 36px 36px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(180, 93, 61, 0.2);
+}
+
+.app-shell {
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: transparent;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  padding: 22px 16px 18px;
+  gap: 26px;
+  border-right: 1px solid rgba(198, 183, 166, 0.82);
+  background: rgba(248, 241, 231, 0.92);
+  box-shadow: inset -1px 0 0 rgba(255, 250, 241, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.brand-block {
+  min-height: 62px;
+  padding: 0 8px;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: sepia(0.42) saturate(0.58) hue-rotate(332deg) brightness(0.74);
+}
+
+.brand-title,
+.page-title h1,
+.command-copy h2,
+.console-toolbar h2,
+.section-heading h2,
+.brand-preview h3 {
+  font-family:
+    "Iowan Old Style", "Songti SC", "STSong", "Noto Serif SC", Georgia, serif;
+}
+
+.brand-title {
+  color: #241f19;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-subtitle {
+  margin-top: 6px;
+  color: #756b5f;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.nav-list {
+  gap: 8px;
+}
+
+.nav-item {
+  height: 46px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #5f554b;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  border-color: #c8b9a8;
+  background: #fffaf1;
+  color: var(--clay-dark);
+  box-shadow: inset 3px 0 0 var(--clay);
+}
+
+.edition-card,
+.runtime-box {
+  margin-top: auto;
+  min-height: 138px;
+  padding: 16px;
+  border: 1px solid #d8caba;
+  border-radius: 8px;
+  background: #fffaf1;
+  box-shadow: var(--shadow-sm);
+}
+
+.edition-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #fffaf1;
+  background: #241f19;
+}
+
+.edition-card strong,
+.runtime-line,
+.panel-title,
+.run-input-panel strong {
+  color: #2d261f;
+}
+
+.edition-card span,
+.edition-link {
+  color: #756b5f;
+}
+
+.edition-link {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.main-panel {
+  min-height: 100vh;
+  padding: 0 34px 34px;
+  background: transparent;
+}
+
+.app-topbar {
+  height: 76px;
+  justify-content: flex-end;
+  gap: 34px;
+  border-bottom: 1px solid rgba(198, 183, 166, 0.7);
+}
+
+.top-nav {
+  gap: 32px;
+}
+
+.top-nav button,
+.account-name {
+  border: 0;
+  background: transparent;
+  color: #4f463c;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.top-nav button:hover,
+.account-name:hover {
+  color: var(--clay-dark);
+}
+
+.topbar-divider {
+  background: #cabcae;
+}
+
+.avatar-chip,
+.brand-mark {
+  border-radius: 8px;
+  background: #241f19;
+  color: #fffaf1;
+  box-shadow: none;
+}
+
+.page-title {
+  margin: 30px 0 24px;
+}
+
+.page-title h1 {
+  color: #241f19;
+  font-size: clamp(42px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.page-title p {
+  max-width: 740px;
+  color: #756b5f;
+  font-size: 17px;
+  line-height: 1.58;
+}
+
+.eyebrow,
+.box-label,
+.summary-label {
+  color: #8f3f26;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.primary-button,
+.ghost-button,
+.danger-button,
+.text-button,
+.icon-button,
+.avatar-button,
+.chat-send-btn,
+.icon-btn {
+  border-radius: 8px;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.primary-button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #241f19;
+  background: #241f19;
+  color: #fffaf1;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.primary-button:hover {
+  border-color: var(--clay-dark);
+  background: var(--clay-dark);
+}
+
+.ghost-button,
+.icon-button,
+.avatar-button {
+  min-height: 40px;
+  border-color: #d4c5b5;
+  background: #fffaf1;
+  color: #3b332b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ghost-button:hover,
+.icon-button:hover,
+.avatar-button:hover {
+  border-color: #a98a70;
+  background: #f8efe2;
+  color: var(--clay-dark);
+}
+
+.text-button {
+  min-height: 34px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--clay-dark);
+  font-weight: 900;
+}
+
+.danger-button {
+  border-color: #8f2d24;
+  background: #8f2d24;
+  color: #fffaf1;
+}
+
+.search-box,
+.employee-search,
+.chat-input-box,
+.command-box,
+.builder-form input,
+.builder-form select,
+.builder-form textarea,
+.run-input-panel input,
+.run-input-panel textarea,
+.blueprint-editor textarea,
+.model-toolbar select,
+.employee-field input,
+.employee-field textarea,
+.field-label input,
+.field-label textarea,
+.field-label select,
+.memory-input {
+  border: 1px solid #d6c8b8;
+  border-radius: 8px;
+  background: #fffaf1;
+  color: #241f19;
+  box-shadow: none;
+}
+
+.search-box input,
+.command-box input,
+.employee-search input,
+.chat-input {
+  color: #241f19;
+}
+
+.search-box input::placeholder,
+.command-box input::placeholder,
+.employee-search input::placeholder,
+.chat-input::placeholder {
+  color: #8a7f72;
+}
+
+.search-box:focus-within,
+.chat-input-box:focus-within,
+.command-box:focus-within,
+.employee-field input:focus,
+.employee-field textarea:focus,
+.builder-form input:focus,
+.builder-form textarea:focus,
+.run-input-panel input:focus,
+.run-input-panel textarea:focus {
+  border-color: var(--clay);
+  background: #fffdf8;
+  box-shadow: 0 0 0 3px rgba(180, 93, 61, 0.1);
+}
+
+.dashboard-grid {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-top: 24px;
+  gap: 18px;
+}
+
+.agent-card,
+.agent-profile,
+.right-rail,
+.timeline-item,
+.run-summary,
+.table-panel,
+.kb-card,
+.model-card,
+.contract-box,
+.audit-wide,
+.metric-card,
+.platform-strip,
+.task-panel,
+.quick-deploy,
+.console-shell,
+.skill-card,
+.skill-source-bar,
+.empty-state,
+.builder-form,
+.orchestration-panel,
+.brand-preview,
+.publish-box,
+.summary-stack,
+.template-card,
+.deploy-card,
+.builder-step,
+.model-profile-card,
+.scenario-panel,
+.employee-directory,
+.employee-panel,
+.employee-resources,
+.employee-profile-card,
+.employee-business-card,
+.employee-hero,
+.activity-heatmap,
+.employee-profile-dialog,
+.worker-editor,
+.worker-section-card,
+.memory-content,
+.permission-item {
+  border: 1px solid #d8caba;
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.92);
+  box-shadow: var(--shadow-sm);
+}
+
+.command-panel {
+  grid-column: span 2;
+  min-height: 366px;
+  padding: 46px 42px 32px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #241f19;
+  border-radius: 8px;
+  background: #241f19;
+  color: #fffaf1;
+  box-shadow: var(--shadow-md);
+}
+
+.command-panel::before,
+.command-panel::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.command-panel::before {
+  inset: 18px 18px auto auto;
+  width: 160px;
+  height: 160px;
+  border-top: 1px solid rgba(255, 250, 241, 0.18);
+  border-right: 1px solid rgba(255, 250, 241, 0.18);
+}
+
+.command-panel::after {
+  right: 28px;
+  bottom: 24px;
+  width: 40%;
+  height: 1px;
+  background: rgba(255, 250, 241, 0.16);
+}
+
+.command-copy,
+.command-box,
+.prompt-suggestions {
+  position: relative;
+  z-index: 1;
+}
+
+.command-copy h2 {
+  width: min(780px, 100%);
+  margin: 0;
+  color: #fffaf1;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  font-size: clamp(42px, 4.6vw, 58px);
+  font-weight: 500;
+  line-height: 0.98;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.command-copy p {
+  max-width: 760px;
+  color: #d8caba;
+  font-size: 17px;
+  line-height: 1.65;
+  font-weight: 500;
+}
+
+.command-panel .tiny-chip {
+  width: fit-content;
+  border-color: rgba(255, 250, 241, 0.22);
+  background: rgba(255, 250, 241, 0.08);
+  color: #f0c6a5;
+}
+
+.command-box {
+  min-height: 70px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px 12px 18px;
+  background: #fffaf1;
+}
+
+.command-spark {
+  color: var(--clay);
+}
+
+.command-box .primary-button {
+  border-color: var(--clay);
+  background: var(--clay);
+}
+
+.prompt-suggestions button,
+.category-filter button,
+.category-list button,
+.agent-switcher button,
+.employee-tabs button,
+.range-toggle button,
+.employee-chips span,
+.status-chip,
+.tiny-chip,
+.status-pill,
+.state-dot,
+.model-profile-head em,
+.skill-card-head em,
+.deploy-card div span,
+.system-pill {
+  min-height: 28px;
+  border: 1px solid #d6c8b8;
+  border-radius: 999px;
+  background: #fffaf1;
+  color: #5f554b;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.prompt-suggestions button:hover,
+.category-filter button:hover,
+.category-list button:hover,
+.category-filter button.active,
+.category-list button.active,
+.agent-switcher button.active,
+.agent-switcher button:hover,
+.employee-tabs button.active,
+.range-toggle button.active {
+  border-color: #b45d3d;
+  background: #f5e6d8;
+  color: #8f3f26;
+}
+
+.scenario-shortcut,
+.deploy-card,
+.agent-card,
+.skill-card,
+.template-card,
+.model-profile-card,
+.employee-directory-card,
+.employee-template-card,
+.worker-card,
+.conversation-item {
+  border-color: #d8caba;
+  border-radius: 8px;
+  background: #fffaf1;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.scenario-shortcut:hover,
+.deploy-card:hover,
+.agent-card:hover,
+.agent-card.selected,
+.skill-card:hover,
+.template-card.selected,
+.template-card:hover,
+.model-profile-card.active,
+.employee-directory-card:hover,
+.employee-directory-card.active,
+.employee-template-card:hover,
+.employee-template-card.active,
+.worker-card:hover,
+.worker-card.active,
+.conversation-item:hover,
+.conversation-item.active {
+  border-color: #b45d3d;
+  background: #f7eadc;
+  color: #241f19;
+  box-shadow: none;
+  transform: none;
+}
+
+.agent-icon,
+.deploy-card div svg,
+.scenario-shortcut > svg,
+.metric-card .panel-title svg,
+.quick-deploy .section-heading svg,
+.timeline-status,
+.flow-index,
+.builder-step > span,
+.growth-event-dot,
+.worker-avatar,
+.employee-avatar {
+  border-radius: 8px;
+  background: #f1e4d4;
+  color: var(--clay-dark);
+  box-shadow: none;
+}
+
+.agent-icon.teal,
+.agent-icon.amber,
+.agent-icon.indigo,
+.agent-icon.blue,
+.agent-icon.green,
+.agent-icon.rose,
+.agent-icon.slate,
+.platform-signal.blue,
+.platform-signal.teal,
+.platform-signal.green,
+.platform-signal.amber {
+  background: #f1e4d4;
+  color: var(--clay-dark);
+}
+
+.platform-strip {
+  padding: 10px;
+  background: rgba(255, 250, 241, 0.82);
+}
+
+.platform-signal,
+.capability,
+.input-tile,
+.timeline-meta span,
+.skill-chips span,
+.skill-meta-grid span,
+.skill-io div,
+.summary-line,
+.business-summary-item,
+.profile-completeness,
+.profile-summary-card,
+.business-cost,
+.token-split div,
+.employee-metric,
+.work-record-row,
+.task-group,
+.work-record-stat,
+.growth-event-row,
+.learned-item,
+.resource-stat,
+.simple-row,
+.permission-summary div,
+.memory-preview p,
+.memory-item,
+.human-gate,
+.human-gate.blue,
+.publish-box,
+.model-message,
+.session-pill {
+  border-color: #e0d3c3;
+  border-radius: 8px;
+  background: #f7f0e6;
+  color: #3a332c;
+}
+
+.metric-card {
+  min-height: 138px;
+  padding: 22px;
+  overflow: hidden;
+}
+
+.metric-card::after {
+  display: none;
+}
+
+.metric-card strong,
+.resource-stat strong,
+.work-record-stat strong,
+.business-summary-item strong,
+.employee-metric strong,
+.business-cost strong,
+.token-split strong,
+.profile-completeness strong {
+  color: #241f19;
+  font-family:
+    "Iowan Old Style", "Songti SC", "STSong", "Noto Serif SC", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.metric-card strong {
+  margin-top: 14px;
+  font-size: 42px;
+}
+
+.panel-title,
+.deploy-card div,
+.task-event em,
+.deploy-card b,
+.contract-row code,
+.runtime-event-row code,
+.kb-card strong,
+.business-summary-item svg,
+.resource-stat svg,
+.work-record-stat svg,
+.learned-item svg,
+.employee-metric.blue svg,
+.employee-metric.teal svg,
+.employee-metric.green svg,
+.employee-metric.amber svg,
+.employee-metric.slate svg {
+  color: var(--clay-dark);
+}
+
+.section-heading h2,
+.panel-title h3,
+.agent-title-row h3,
+.deploy-card strong,
+.skill-card-head h3,
+.model-profile-head h3,
+.template-card strong,
+.employee-profile-card h2,
+.employee-hero h2,
+.employee-panel-head strong,
+.employee-directory-head strong,
+.chat-welcome h3,
+.worker-home-title h2,
+.worker-section-card h3 {
+  color: #241f19;
+  font-weight: 800;
+}
+
+.agent-card p,
+.agent-profile p,
+.timeline-body p,
+.human-gate p,
+.model-card p,
+.kb-card p,
+.deploy-card p,
+.skill-card p,
+.template-card p,
+.builder-step p,
+.publish-box p,
+.brand-preview p,
+.employee-profile-card p,
+.employee-hero p,
+.run-input-panel p,
+.task-event p,
+.profile-summary-card li,
+.profile-summary-card em,
+.employee-template-card p,
+.chat-welcome p {
+  color: #756b5f;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.employee-workbench {
+  grid-template-columns: 312px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.employee-directory {
+  top: 92px;
+}
+
+.employee-directory-head,
+.employee-profile-dialog-head,
+.employee-profile-dialog-foot,
+.console-toolbar,
+.chat-header,
+.worker-home-header,
+.worker-tabs,
+.employee-tabs,
+.table-row,
+.table-header {
+  border-color: var(--line);
+}
+
+.employee-profile-card,
+.employee-business-card,
+.employee-hero {
+  padding: 18px;
+}
+
+.employee-hero {
+  background: #fffaf1;
+}
+
+.employee-avatar.large {
+  width: 72px;
+  height: 72px;
+  background: #241f19 !important;
+  color: #fffaf1 !important;
+}
+
+.live-dot,
+.system-pill span,
+.event-dot {
+  background: #60735f;
+  box-shadow: 0 0 0 4px rgba(96, 115, 95, 0.14);
+}
+
+.profile-completeness-bar,
+.progress-bar,
+.mini-bar,
+.token-share,
+.usage-bar-track {
+  background: #e6dacb;
+}
+
+.profile-completeness-bar span,
+.progress-bar div,
+.mini-bar i,
+.token-share span,
+.usage-bar-track span {
+  background: var(--clay);
+}
+
+.token-share em {
+  background: var(--sage);
+}
+
+.usage-bar-track span {
+  background: var(--clay);
+}
+
+.record-marker {
+  background: var(--clay);
+  box-shadow: 0 0 0 4px rgba(180, 93, 61, 0.18);
+}
+
+.heat-0 { background: #eee4d7; }
+.heat-1 { background: #dfcfb7; }
+.heat-2 { background: #c7a578; }
+.heat-3 { background: #a56f43; }
+.heat-4 { background: #6f3d2b; }
+
+.cost-note,
+.employee-editor-note {
+  border-color: #e7c9a8;
+  background: #fff2de;
+  color: #8f3f26;
+}
+
+.status-chip.completed {
+  background: #e6edde;
+  color: #3f5d3f;
+}
+
+.status-chip.failed,
+.danger-button.subtle {
+  background: #f7dfd9;
+  color: #8f2d24;
+  border-color: #d9aca2;
+}
+
+.status-chip.running,
+.status-chip.queued {
+  background: #f5e6d8;
+  color: #8f3f26;
+}
+
+.chat-view {
+  height: calc(100vh - 176px);
+  min-height: 680px;
+  border: 1px solid #d8caba;
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.82);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-sidebar {
+  border-right-color: #d8caba;
+  background: rgba(248, 241, 231, 0.92);
+}
+
+.chat-main {
+  background: #f7f0e6;
+}
+
+.chat-header,
+.chat-input-wrap {
+  background: rgba(255, 250, 241, 0.92);
+}
+
+.chat-messages {
+  padding: 24px;
+}
+
+.message-content {
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.66;
+}
+
+.message-bubble.user .message-content {
+  background: #241f19;
+  color: #fffaf1;
+  border-bottom-right-radius: 8px;
+}
+
+.message-bubble.assistant .message-content {
+  border-color: #d8caba;
+  background: #fffaf1;
+  border-bottom-left-radius: 8px;
+}
+
+.message-avatar {
+  background: #eadcca;
+  color: #5f554b;
+}
+
+.message-bubble.user .message-avatar {
+  background: var(--clay);
+  color: #fffaf1;
+}
+
+.chat-send-btn {
+  background: #241f19;
+  color: #fffaf1;
+}
+
+.chat-send-btn.abort,
+.chat-error {
+  background: #8f2d24;
+  color: #fffaf1;
+}
+
+.tool-call-card {
+  border-color: #d8caba;
+  border-left-color: var(--clay);
+  border-radius: 8px;
+  background: #f7f0e6;
+}
+
+.tool-call-header:hover,
+.icon-btn:hover {
+  background: #eadcca;
+}
+
+.conversation-item-delete:hover {
+  color: #8f2d24;
+}
+
+.console-shell {
+  overflow: hidden;
+}
+
+.console-toolbar {
+  min-height: 84px;
+  padding: 18px 20px;
+  background: #fffaf1;
+}
+
+.console-toolbar h2 {
+  color: #241f19;
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.console-frame {
+  background: #fffaf1;
+}
+
+.segmented,
+.range-toggle {
+  border: 1px solid #d6c8b8;
+  border-radius: 8px;
+  background: #eadcca;
+}
+
+.segmented button,
+.range-toggle button {
+  border-radius: 6px;
+  color: #5f554b;
+}
+
+.segmented button.active,
+.range-toggle button.active {
+  background: #fffaf1;
+  color: var(--clay-dark);
+  box-shadow: none;
+}
+
+.table-header {
+  background: #eadcca;
+  color: #5f554b;
+}
+
+.table-row {
+  color: #3a332c;
+}
+
+.empty-state,
+.employee-empty,
+.mini-empty,
+.growth-empty {
+  border-color: #cbbdab;
+  background: rgba(247, 240, 230, 0.76);
+  color: #756b5f;
+}
+
+.employee-profile-dialog {
+  box-shadow: 0 28px 70px rgba(36, 31, 25, 0.22);
+}
+
+.employee-profile-dialog-head,
+.employee-profile-dialog-foot {
+  background: #fffaf1;
+}
+
+.employee-profile-form {
+  background: #f8f1e7;
+}
+
+.employee-template-card {
+  min-height: 118px;
+}
+
+.employee-template-head span,
+.employee-field span,
+.model-toolbar label,
+.builder-form label,
+.run-input-panel label,
+.blueprint-editor,
+.field-label,
+.worker-list-header,
+.conversation-list-header,
+.employee-directory-head span,
+.employee-panel-head span,
+.employee-metric span,
+.profile-completeness span,
+.business-summary-item span,
+.work-record-stat span,
+.activity-heatmap-head span,
+.growth-column-title,
+.resource-stat span,
+.permission-summary span,
+.skill-card-head span,
+.model-profile-head span {
+  color: #756b5f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.model-toolbar,
+.control-topbar,
+.skill-source-bar {
+  background: rgba(255, 250, 241, 0.9);
+}
+
+.model-profile-card.active {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 1px rgba(180, 93, 61, 0.12);
+}
+
+.blueprint-editor textarea {
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .main-panel {
+    padding: 0 18px 28px;
+  }
+
+  .app-topbar {
+    height: auto;
+    min-height: 64px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 0;
+  }
+
+  .top-nav {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 880px) {
+  .dashboard-grid,
+  .deploy-grid,
+  .agent-grid,
+  .model-profile-grid,
+  .skill-market-grid,
+  .builder-panel,
+  .builder-form,
+  .settings-grid,
+  .right-rail,
+  .skill-io,
+  .employee-workbench,
+  .employee-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-directory {
+    position: static;
+  }
+
+  .command-panel {
+    grid-column: 1 / -1;
+    padding: 36px 24px 26px;
+  }
+
+  .command-box {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .command-box .primary-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .chat-view {
+    height: auto;
+    min-height: 720px;
+  }
+}
+
+@media (max-width: 560px) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .main-panel {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .page-title h1 {
+    font-size: 38px;
+    line-height: 1.02;
+  }
+
+  .page-title p,
+  .command-copy p {
+    font-size: 15px;
+  }
+
+  .command-copy h2 {
+    font-size: 34px;
+    overflow-wrap: anywhere;
+  }
+
+  .command-panel {
+    padding: 30px 18px 22px;
+  }
+
+  .top-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .top-nav button {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-list {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-width: 112px;
+  }
+
+  .metric-card strong {
+    font-size: 34px;
+  }
+}
