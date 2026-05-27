@@ -6,7 +6,7 @@ import ChatInput from "./ChatInput";
 import WorkerList from "../workers/WorkerList";
 import WorkerProfileDialog, { emptyWorkerDraft } from "../workers/WorkerProfileDialog";
 import { useChatStreaming } from "../../hooks/useChatStreaming";
-import { listWorkers, createWorker, updateWorker } from "../../api/workerApi";
+import { listWorkers, listWorkerPresets, createWorker, updateWorker } from "../../api/workerApi";
 import { listConversations, getConversation, createConversation, deleteConversation } from "../../api/chatApi";
 
 export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
@@ -19,6 +19,7 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
   const [profileDraft, setProfileDraft] = useState(emptyWorkerDraft());
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [workerPresets, setWorkerPresets] = useState([]);
   const messagesEndRef = useRef(null);
 
   const { messages, setMessages, isStreaming, error, sendMessage, abort, clearMessages } =
@@ -29,6 +30,7 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
       setWorkers(w);
       if (w.length > 0 && !activeWorkerId) setActiveWorkerId(initialWorkerId || w[0].id);
     });
+    listWorkerPresets().then(setWorkerPresets).catch(() => setWorkerPresets([]));
     fetch("/futuretech-admin/skills").then((r) => r.json()).then((d) => setSkills(d.skills || [])).catch(() => {});
   }, []);
 
@@ -109,6 +111,28 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
     setProfileDraft((current) => ({ ...current, [field]: value }));
   };
 
+  const applyWorkerPreset = (preset) => {
+    setProfileDraft((current) => ({
+      ...current,
+      templateId: preset.id,
+      name: preset.name,
+      employeeType: preset.employeeType || "数字员工",
+      description: preset.description || "",
+      avatar: preset.avatar || current.avatar,
+      color: preset.color || current.color,
+      skills: preset.skills || [],
+      skillLabels: preset.skillLabels || [],
+      identity: preset.identity || "",
+      persona: preset.persona || "",
+      tools: preset.tools || "",
+      memoryMd: preset.memoryMd || "",
+      workStyles: preset.workStyles || "",
+      coreCapabilities: preset.coreCapabilities || "",
+      deliveryCommitments: preset.deliveryCommitments || "",
+      userMd: preset.userMd || "",
+    }));
+  };
+
   const saveProfile = async (event) => {
     event.preventDefault();
     const name = profileDraft.name.trim();
@@ -123,6 +147,23 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
       description: profileDraft.description.trim(),
       model: profileDraft.model.trim() || null,
     };
+    if (profileMode === "create") {
+      Object.assign(payload, {
+        presetId: profileDraft.templateId,
+        avatar: profileDraft.avatar || undefined,
+        color: profileDraft.color || undefined,
+        skills: profileDraft.skills || [],
+        skillLabels: profileDraft.skillLabels || [],
+        identity: profileDraft.identity,
+        persona: profileDraft.persona,
+        tools: profileDraft.tools,
+        memoryMd: profileDraft.memoryMd,
+        workStyles: profileDraft.workStyles,
+        coreCapabilities: profileDraft.coreCapabilities,
+        deliveryCommitments: profileDraft.deliveryCommitments,
+        userMd: profileDraft.userMd,
+      });
+    }
 
     setProfileSaving(true);
     setProfileError("");
@@ -197,7 +238,9 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
           mode={profileMode}
           error={profileError}
           saving={profileSaving}
+          presets={workerPresets}
           onChange={updateProfileDraft}
+          onApplyPreset={applyWorkerPreset}
           onClose={closeProfileEditor}
           onSave={saveProfile}
         />

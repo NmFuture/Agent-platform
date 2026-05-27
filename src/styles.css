@@ -6314,6 +6314,76 @@ button {
   gap: 14px;
 }
 
+.employee-template-section {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+}
+
+.employee-template-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.employee-template-head span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.employee-template-head strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.employee-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.employee-template-card {
+  min-width: 0;
+  min-height: 118px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.employee-template-card:hover,
+.employee-template-card.active {
+  border-color: #9bb7f8;
+  background: #eff6ff;
+}
+
+.employee-template-card strong {
+  font-size: 14px;
+}
+
+.employee-template-card span,
+.employee-template-card em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.employee-template-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .employee-field {
   min-width: 0;
   display: grid;
@@ -6567,6 +6637,15 @@ button {
 
   .employee-profile-form {
     grid-template-columns: 1fr;
+  }
+
+  .employee-template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-template-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .business-cost strong {

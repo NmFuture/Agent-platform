@@ -29,7 +29,7 @@ import {
   WalletCards,
   Zap,
 } from "lucide-react";
-import { createWorker, deleteWorker, getWorkerOverview, listWorkers, updateWorker } from "../../api/workerApi";
+import { createWorker, deleteWorker, getWorkerOverview, listWorkerPresets, listWorkers, updateWorker } from "../../api/workerApi";
 import WorkerProfileDialog, { emptyWorkerDraft } from "./WorkerProfileDialog";
 
 const iconMap = { Bot, FileText, PenTool, Briefcase, Mail, Code, Settings };
@@ -426,6 +426,7 @@ export default function WorkerDashboard({ onOpenChat }) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileDeleting, setProfileDeleting] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [workerPresets, setWorkerPresets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -459,6 +460,7 @@ export default function WorkerDashboard({ onOpenChat }) {
 
   useEffect(() => {
     loadWorkers();
+    listWorkerPresets().then(setWorkerPresets).catch(() => setWorkerPresets([]));
   }, []);
 
   useEffect(() => {
@@ -533,6 +535,28 @@ export default function WorkerDashboard({ onOpenChat }) {
     setProfileDraft((current) => ({ ...current, [field]: value }));
   };
 
+  const applyWorkerPreset = (preset) => {
+    setProfileDraft((current) => ({
+      ...current,
+      templateId: preset.id,
+      name: preset.name,
+      employeeType: preset.employeeType || "数字员工",
+      description: preset.description || "",
+      avatar: preset.avatar || current.avatar,
+      color: preset.color || current.color,
+      skills: preset.skills || [],
+      skillLabels: preset.skillLabels || [],
+      identity: preset.identity || "",
+      persona: preset.persona || "",
+      tools: preset.tools || "",
+      memoryMd: preset.memoryMd || "",
+      workStyles: preset.workStyles || "",
+      coreCapabilities: preset.coreCapabilities || "",
+      deliveryCommitments: preset.deliveryCommitments || "",
+      userMd: preset.userMd || "",
+    }));
+  };
+
   const saveProfile = async (event) => {
     event.preventDefault();
     const name = profileDraft.name.trim();
@@ -547,6 +571,23 @@ export default function WorkerDashboard({ onOpenChat }) {
       description: profileDraft.description.trim(),
       model: profileDraft.model.trim() || null,
     };
+    if (profileMode === "create") {
+      Object.assign(payload, {
+        presetId: profileDraft.templateId,
+        avatar: profileDraft.avatar || undefined,
+        color: profileDraft.color || undefined,
+        skills: profileDraft.skills || [],
+        skillLabels: profileDraft.skillLabels || [],
+        identity: profileDraft.identity,
+        persona: profileDraft.persona,
+        tools: profileDraft.tools,
+        memoryMd: profileDraft.memoryMd,
+        workStyles: profileDraft.workStyles,
+        coreCapabilities: profileDraft.coreCapabilities,
+        deliveryCommitments: profileDraft.deliveryCommitments,
+        userMd: profileDraft.userMd,
+      });
+    }
 
     setProfileSaving(true);
     setProfileError("");
@@ -848,7 +889,9 @@ export default function WorkerDashboard({ onOpenChat }) {
           saving={profileSaving}
           deleting={profileDeleting}
           deleteDisabled={profileDraft.id === "worker-default"}
+          presets={workerPresets}
           onChange={updateProfileDraft}
+          onApplyPreset={applyWorkerPreset}
           onClose={closeProfileEditor}
           onSave={saveProfile}
           onDelete={deleteProfile}
@@ -892,7 +935,9 @@ function ResourcePanel({ overview, activeTab }) {
   }
 
   if (activeTab === "skills") {
-    return <SimpleRows items={overview.skills.bound || []} empty="暂未绑定技能" getTitle={(item) => item} getMeta={() => "已绑定"} />;
+    const labels = overview.skills.labels || [];
+    const items = (overview.skills.bound || []).map((id, index) => ({ id, name: labels[index] || id }));
+    return <SimpleRows items={items} empty="暂未绑定技能" getTitle={(item) => item.name} getMeta={(item) => item.id} />;
   }
 
   if (activeTab === "connectors") {

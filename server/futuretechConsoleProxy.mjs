@@ -384,6 +384,28 @@ const skillCategoryRules = [
   },
 ];
 
+const skillDisplayNames = {
+  "contract-e2e-excel": "合同抽取转表格",
+  "bid-assembler": "标书材料组装",
+  "lark-doc": "飞书文档",
+  "lark-sheets": "飞书表格",
+  "lark-drive": "飞书云空间",
+  "lark-minutes": "飞书妙记",
+  "lark-vc": "飞书会议",
+  "lark-workflow-meeting-summary": "会议纪要汇总",
+  "lark-task": "飞书任务",
+  "lark-approval": "飞书审批",
+  "lark-base": "飞书多维表格",
+  "lark-im": "飞书消息",
+  "officecli": "Office 文档处理",
+  "lark-wiki": "飞书知识库",
+  "lark-markdown": "飞书 Markdown",
+};
+
+function displaySkillName(skillId) {
+  return skillDisplayNames[skillId] || skillId;
+}
+
 function inferSkillCategory(skill) {
   const text = `${skill.id || ""} ${skill.name || ""} ${skill.description || ""} ${skill.path || ""}`.toLowerCase();
   return (
@@ -930,6 +952,7 @@ function makeDefaultAgentosState() {
     conversations: [],
     workerUsageEvents: [],
     workerGrowthEvents: [],
+    disabledWorkerPresets: [],
     auditEvents: [
       {
         id: `audit-${Date.now()}`,
@@ -955,6 +978,7 @@ function loadAgentosState() {
       runs: Array.isArray(state.runs) ? state.runs : [],
       workerUsageEvents: Array.isArray(state.workerUsageEvents) ? state.workerUsageEvents : [],
       workerGrowthEvents: Array.isArray(state.workerGrowthEvents) ? state.workerGrowthEvents : [],
+      disabledWorkerPresets: Array.isArray(state.disabledWorkerPresets) ? state.disabledWorkerPresets : [],
       auditEvents: Array.isArray(state.auditEvents) ? state.auditEvents : [],
       securityPolicy: state.securityPolicy || defaultSecurityPolicy,
     };
@@ -2088,6 +2112,170 @@ async function handleAdmin(req, res) {
     writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
   }
 
+  const WORKER_PRESETS = [
+    {
+      id: "worker-preset-contract-reviewer",
+      name: "合同审查官",
+      employeeType: "合同风控",
+      avatar: "FileText",
+      color: "teal",
+      description: "负责合同条款抽取、风险识别、付款节点和交付义务核对。",
+      skills: ["contract-e2e-excel", "lark-doc", "lark-sheets"],
+      capabilities: ["合同 PDF 结构化抽取", "付款与违约条款识别", "风险点归纳与复核清单", "Excel 结果交付"],
+      workStyles: ["先抽取事实，再输出风险判断", "高风险条款必须给出依据", "结果默认适合商务和法务复核"],
+      deliveryCommitments: ["输出条款摘要、风险清单和待人工确认项", "不确定条款标记为需复核", "保留产物路径和抽取统计"],
+      serviceTargets: ["法务", "商务", "项目交付"],
+    },
+    {
+      id: "worker-preset-bid-specialist",
+      name: "投标材料专员",
+      employeeType: "标书助理",
+      avatar: "Briefcase",
+      color: "amber",
+      description: "负责投标文件整理、技术/商务响应、附件清单和交付材料组装。",
+      skills: ["bid-assembler", "lark-doc", "lark-drive", "lark-sheets"],
+      capabilities: ["标书目录和附件清单整理", "商务响应材料汇总", "技术方案初稿生成", "多文档交付检查"],
+      workStyles: ["先核对招标要求，再组织材料", "缺失附件必须显式标记", "输出适合进一步人工精修"],
+      deliveryCommitments: ["输出材料清单、缺口清单和组装建议", "保持原始依据可追踪", "避免编造资质或业绩"],
+      serviceTargets: ["售前", "商务", "交付团队"],
+    },
+    {
+      id: "worker-preset-meeting-assistant",
+      name: "会议纪要助理",
+      employeeType: "会议运营",
+      avatar: "PenTool",
+      color: "blue",
+      description: "负责会议记录整理、待办提炼、参会信息回顾和周报素材沉淀。",
+      skills: ["lark-minutes", "lark-vc", "lark-workflow-meeting-summary", "lark-task"],
+      capabilities: ["会议纪要提炼", "行动项拆解", "参会记录回顾", "周报素材整理"],
+      workStyles: ["先按时间线还原事实，再提炼结论", "待办必须包含负责人和时间线", "对争议事项保留原始表述"],
+      deliveryCommitments: ["输出纪要摘要、待办列表和风险提醒", "会议事实与个人判断分开写", "重要待办可同步到任务系统"],
+      serviceTargets: ["项目经理", "管理层", "运营团队"],
+    },
+    {
+      id: "worker-preset-lark-ops",
+      name: "飞书流程管家",
+      employeeType: "协同运营",
+      avatar: "Settings",
+      color: "purple",
+      description: "负责飞书审批、任务、群消息、Base 表格和跨部门流程协同。",
+      skills: ["lark-approval", "lark-task", "lark-base", "lark-im"],
+      capabilities: ["审批流查询与提醒", "任务创建和跟踪", "多维表格记录管理", "群消息通知与协同"],
+      workStyles: ["先确认操作对象和权限边界", "涉及通知或审批必须明确收件人", "保留每次流程动作的结果"],
+      deliveryCommitments: ["输出流程状态、下一步动作和异常原因", "不擅自发送敏感通知", "关键操作前提示人工确认"],
+      serviceTargets: ["行政", "项目管理", "业务运营"],
+    },
+    {
+      id: "worker-preset-data-analyst",
+      name: "数据分析员",
+      employeeType: "经营分析",
+      avatar: "Code",
+      color: "green",
+      description: "负责表格数据清洗、经营指标分析、异常识别和报告素材整理。",
+      skills: ["lark-sheets", "lark-base", "officecli"],
+      capabilities: ["表格数据读取与清洗", "指标口径整理", "异常数据识别", "分析结论摘要"],
+      workStyles: ["先确认口径，再做计算", "结论必须回到数据依据", "异常值单独列出并建议复核"],
+      deliveryCommitments: ["输出指标摘要、异常列表和下一步建议", "不把估算当真实数据", "保留计算假设"],
+      serviceTargets: ["经营管理", "财务", "业务负责人"],
+    },
+    {
+      id: "worker-preset-knowledge-manager",
+      name: "知识库管理员",
+      employeeType: "知识运营",
+      avatar: "Bot",
+      color: "rose",
+      description: "负责企业知识沉淀、文档整理、知识库结构维护和复用内容提炼。",
+      skills: ["lark-wiki", "lark-doc", "lark-drive", "lark-markdown"],
+      capabilities: ["知识库目录整理", "文档摘要和标签生成", "资料归档建议", "复用模板沉淀"],
+      workStyles: ["先梳理结构，再补充内容", "重复知识合并，冲突知识标记", "输出面向复用而非堆砌"],
+      deliveryCommitments: ["输出知识结构、摘要和待补充项", "保留来源文档引用", "适合后续进入 Wiki 或文档库"],
+      serviceTargets: ["交付团队", "产品团队", "运营团队"],
+    },
+  ];
+
+  function workerPresetMarkdowns(preset) {
+    const list = (items) => (items || []).map((item) => `- ${item}`).join("\n");
+    const skillList = (preset.skills || []).map((item) => `- ${displaySkillName(item)}（${item}）`).join("\n");
+    return {
+      identity: `# 身份 — ${preset.name}\n\n${preset.description}\n\n## 岗位定位\n\n${preset.name} 是面向${(preset.serviceTargets || []).join("、") || "业务团队"}的${preset.employeeType}数字员工。\n\n## 能力边界\n\n- 可以基于用户提供的资料、对话和绑定技能完成分析、整理和交付。\n- 涉及外部发送、审批、权限或高风险结论时，需要提示人工确认。\n`,
+      persona: `# 人设 — ${preset.name}\n\n## 工作态度\n\n- 稳定、谨慎、结果导向\n- 先澄清目标和输入，再执行任务\n- 对不确定信息明确标记，不伪装确定性\n`,
+      tools: `# 工具与技能\n\n## 预置技能\n\n${skillList}\n\n## 使用原则\n\n- 优先使用与任务匹配的绑定技能。\n- 缺少输入、权限或上下文时先说明缺口。\n`,
+      memoryMd: `# 记忆索引\n\n## 用户偏好\n\n## 工作规则\n\n- ${preset.name} 默认服务于${(preset.serviceTargets || []).join("、") || "业务团队"}。\n- 输出需要包含依据、结论和下一步建议。\n\n## 反馈记录\n`,
+      workStyles: JSON.stringify(
+        (preset.workStyles || []).map((description, index) => ({
+          name: `工作风格 ${index + 1}`,
+          description,
+        })),
+        null,
+        2
+      ),
+      coreCapabilities: `# 核心能力\n\n${list(preset.capabilities)}\n`,
+      deliveryCommitments: `# 交付承诺\n\n${list(preset.deliveryCommitments)}\n`,
+      userMd: `# 服务对象\n\n${list(preset.serviceTargets)}\n`,
+    };
+  }
+
+  function publicWorkerPreset(preset) {
+    const markdowns = workerPresetMarkdowns(preset);
+    return {
+      ...preset,
+      skillLabels: (preset.skills || []).map(displaySkillName),
+      identity: markdowns.identity,
+      persona: markdowns.persona,
+      tools: markdowns.tools,
+      memoryMd: markdowns.memoryMd,
+      workStyles: markdowns.workStyles,
+      coreCapabilities: markdowns.coreCapabilities,
+      deliveryCommitments: markdowns.deliveryCommitments,
+      userMd: markdowns.userMd,
+    };
+  }
+
+  function seedPresetWorkers() {
+    const state = loadAgentosState();
+    const disabled = new Set(state.disabledWorkerPresets || []);
+    const now = new Date().toISOString();
+    let changed = false;
+
+    for (const preset of WORKER_PRESETS) {
+      if (disabled.has(preset.id)) continue;
+      if (readWorkerMeta(preset.id)) continue;
+
+      const markdowns = workerPresetMarkdowns(preset);
+      const meta = {
+        id: preset.id,
+        name: preset.name,
+        avatar: preset.avatar,
+        color: preset.color,
+        description: preset.description,
+        model: null,
+        employeeType: preset.employeeType,
+        skills: preset.skills,
+        skillLabels: (preset.skills || []).map(displaySkillName),
+        preset: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const { qoderDir } = loadWorkerDir(preset.id);
+      writeWorkerMeta(preset.id, meta);
+      writeWorkerMarkdown(qoderDir, "IDENTITY.md", markdowns.identity);
+      writeWorkerMarkdown(qoderDir, "PERSONA.md", markdowns.persona);
+      writeWorkerMarkdown(qoderDir, "TOOLS.md", markdowns.tools);
+      writeWorkerMarkdown(qoderDir, "MEMORY.md", markdowns.memoryMd);
+      writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", markdowns.workStyles);
+      writeWorkerMarkdown(qoderDir, "BIBLE.md", "");
+      writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", markdowns.coreCapabilities);
+      writeWorkerMarkdown(qoderDir, "DELIVERY_COMMITMENTS.md", markdowns.deliveryCommitments);
+      writeWorkerMarkdown(qoderDir, "USER.md", markdowns.userMd);
+      mkdirSync(join(qoderDir, "memory"), { recursive: true });
+      mkdirSync(join(qoderDir, "sessions"), { recursive: true });
+      state.workers = [meta, ...(state.workers || []).filter((item) => item.id !== preset.id)];
+      changed = true;
+    }
+
+    if (changed) saveAgentosState(state);
+  }
+
   function seedDefaultWorker() {
     const defaultId = "worker-default";
     const metaPath = join(workersDir, defaultId, "meta.json");
@@ -2116,6 +2304,7 @@ async function handleAdmin(req, res) {
   function listAllWorkers() {
     mkdirSync(workersDir, { recursive: true });
     seedDefaultWorker();
+    seedPresetWorkers();
     const dirs = readdirSync(workersDir).filter((d) => {
       try { return statSync(join(workersDir, d)).isDirectory(); } catch { return false; }
     });
@@ -2566,6 +2755,9 @@ async function handleAdmin(req, res) {
       skills: {
         count: (meta.skills || []).length,
         bound: meta.skills || [],
+        labels: (meta.skillLabels || []).length === (meta.skills || []).length
+          ? meta.skillLabels
+          : (meta.skills || []).map(displaySkillName),
       },
       permissions: {
         summary: meta.permissions ? "已配置权限边界" : "默认安全边界",
@@ -2578,6 +2770,11 @@ async function handleAdmin(req, res) {
     };
   }
 
+  if (url.pathname === "/futuretech-admin/worker-presets" && req.method === "GET") {
+    sendJson(res, 200, { presets: WORKER_PRESETS.map(publicWorkerPreset) });
+    return true;
+  }
+
   if (url.pathname === "/futuretech-admin/workers" && req.method === "GET") {
     sendJson(res, 200, { workers: listAllWorkers() });
     return true;
@@ -2585,26 +2782,31 @@ async function handleAdmin(req, res) {
 
   if (url.pathname === "/futuretech-admin/workers" && req.method === "POST") {
     const body = await readRequestJson(req);
+    const preset = WORKER_PRESETS.find((item) => item.id === body.presetId);
+    const presetMarkdowns = preset ? workerPresetMarkdowns(preset) : {};
     const id = `w-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const now = new Date().toISOString();
     const meta = {
-      id, name: body.name || "新数字员工",
-      avatar: body.avatar || "Bot", color: body.color || "blue",
-      description: body.description || "", model: body.model || null,
-      employeeType: body.employeeType || "",
+      id, name: body.name || preset?.name || "新数字员工",
+      avatar: body.avatar || preset?.avatar || "Bot", color: body.color || preset?.color || "blue",
+      description: body.description || preset?.description || "", model: body.model || null,
+      employeeType: body.employeeType || preset?.employeeType || "",
+      skills: Array.isArray(body.skills) ? body.skills : preset?.skills || [],
+      skillLabels: Array.isArray(body.skillLabels) ? body.skillLabels : preset?.skills?.map(displaySkillName) || [],
+      templateId: body.presetId || "",
       createdAt: now, updatedAt: now,
     };
     const { qoderDir } = loadWorkerDir(id);
     writeWorkerMeta(id, meta);
-    writeWorkerMarkdown(qoderDir, "IDENTITY.md", body.identity || `# Identity — ${meta.name}\n\n${meta.description}\n`);
-    writeWorkerMarkdown(qoderDir, "PERSONA.md", body.persona || `# Persona — ${meta.name}\n\n## Character Traits\n\n- Helpful and precise\n`);
-    writeWorkerMarkdown(qoderDir, "TOOLS.md", body.tools || "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件\n- **Write**: 写入文件\n- **Bash**: 执行命令\n");
-    writeWorkerMarkdown(qoderDir, "MEMORY.md", body.memoryMd || "# 记忆索引\n\n## 用户偏好\n\n## 工作规则\n\n## 反馈记录\n");
-    writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", body.workStyles || "[]");
+    writeWorkerMarkdown(qoderDir, "IDENTITY.md", body.identity || presetMarkdowns.identity || `# 身份 — ${meta.name}\n\n${meta.description}\n`);
+    writeWorkerMarkdown(qoderDir, "PERSONA.md", body.persona || presetMarkdowns.persona || `# 人设 — ${meta.name}\n\n## 性格特征\n\n- 可靠细致\n- 表达清晰\n`);
+    writeWorkerMarkdown(qoderDir, "TOOLS.md", body.tools || presetMarkdowns.tools || "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件\n- **Write**: 写入文件\n- **Bash**: 执行命令\n");
+    writeWorkerMarkdown(qoderDir, "MEMORY.md", body.memoryMd || presetMarkdowns.memoryMd || "# 记忆索引\n\n## 用户偏好\n\n## 工作规则\n\n## 反馈记录\n");
+    writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", body.workStyles || presetMarkdowns.workStyles || "[]");
     writeWorkerMarkdown(qoderDir, "BIBLE.md", body.bible || "");
-    writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", body.coreCapabilities || "");
-    writeWorkerMarkdown(qoderDir, "DELIVERY_COMMITMENTS.md", body.deliveryCommitments || "");
-    writeWorkerMarkdown(qoderDir, "USER.md", body.userMd || "");
+    writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", body.coreCapabilities || presetMarkdowns.coreCapabilities || "");
+    writeWorkerMarkdown(qoderDir, "DELIVERY_COMMITMENTS.md", body.deliveryCommitments || presetMarkdowns.deliveryCommitments || "");
+    writeWorkerMarkdown(qoderDir, "USER.md", body.userMd || presetMarkdowns.userMd || "");
     mkdirSync(join(qoderDir, "memory"), { recursive: true });
     mkdirSync(join(qoderDir, "sessions"), { recursive: true });
     const state = loadAgentosState();
@@ -2706,6 +2908,9 @@ async function handleAdmin(req, res) {
       state.workers = (state.workers || []).filter((item) => item.id !== workerId);
       state.workerGrowthEvents = (state.workerGrowthEvents || []).filter((item) => item.workerId !== workerId);
       state.workerUsageEvents = (state.workerUsageEvents || []).filter((item) => item.workerId !== workerId);
+      if (meta.preset) {
+        state.disabledWorkerPresets = [...new Set([...(state.disabledWorkerPresets || []), workerId])];
+      }
       saveAgentosState(state);
       recordAudit("删除数字员工", meta.name, "operator");
       sendJson(res, 200, { ok: true });

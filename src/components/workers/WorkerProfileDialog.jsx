@@ -4,10 +4,23 @@ import { Trash2, X } from "lucide-react";
 export function emptyWorkerDraft(worker = null) {
   return {
     id: worker?.id || "",
+    templateId: worker?.templateId || "",
     name: worker?.name || "",
     employeeType: worker?.employeeType || worker?.role || "",
     description: worker?.description || "",
     model: worker?.model || "",
+    avatar: worker?.avatar || "",
+    color: worker?.color || "",
+    skills: Array.isArray(worker?.skills) ? worker.skills : [],
+    skillLabels: Array.isArray(worker?.skillLabels) ? worker.skillLabels : [],
+    identity: worker?.identity || "",
+    persona: worker?.persona || "",
+    tools: worker?.tools || "",
+    memoryMd: worker?.memoryMd || "",
+    workStyles: worker?.workStyles || "",
+    coreCapabilities: worker?.coreCapabilities || "",
+    deliveryCommitments: worker?.deliveryCommitments || "",
+    userMd: worker?.userMd || "",
   };
 }
 
@@ -18,7 +31,9 @@ export default function WorkerProfileDialog({
   saving,
   deleting,
   deleteDisabled,
+  presets = [],
   onChange,
+  onApplyPreset,
   onClose,
   onSave,
   onDelete,
@@ -45,6 +60,29 @@ export default function WorkerProfileDialog({
         </div>
 
         <div className="employee-profile-form">
+          {mode === "create" && presets.length > 0 && (
+            <div className="employee-template-section">
+              <div className="employee-template-head">
+                <span>常用员工模板</span>
+                <strong>选择后会自动带入岗位、技能和档案摘要</strong>
+              </div>
+              <div className="employee-template-grid">
+                {presets.map((preset) => (
+                  <button
+                    className={`employee-template-card ${draft.templateId === preset.id ? "active" : ""}`}
+                    key={preset.id}
+                    type="button"
+                    onClick={() => onApplyPreset?.(preset)}
+                  >
+                    <strong>{preset.name}</strong>
+                    <span>{preset.employeeType}</span>
+                    <p>{preset.description}</p>
+                    <em>{(preset.skillLabels || preset.skills || []).slice(0, 3).join("、") || "待绑定技能"}</em>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="employee-field">
             <span>员工名称</span>
             <input

@@ -6,6 +6,12 @@ export async function listWorkers() {
   return (await res.json()).workers || [];
 }
 
+export async function listWorkerPresets() {
+  const res = await fetch(`${API_BASE}/worker-presets`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()).presets || [];
+}
+
 export async function getWorker(id) {
   const res = await fetch(`${API_BASE}/workers/${id}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
