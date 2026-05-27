@@ -26,6 +26,8 @@ const runtimeDir = join(root, ".runtime");
 const statePath = join(runtimeDir, "services.json");
 const agentosStatePath = join(runtimeDir, "agentos-state.json");
 const runLogDir = join(runtimeDir, "agentos-runs");
+const workersDir = join(runtimeDir, "workers");
+const conversationsDir = join(runtimeDir, "conversations");
 const bundledSkillRoot = join(root, "skills");
 const runtimePort = Number(target.port || 4096);
 const runtimeHost = target.hostname || "127.0.0.1";
@@ -909,6 +911,25 @@ function makeDefaultAgentosState() {
     updatedAt: new Date().toISOString(),
     agents: defaultAgents.map(normalizeAgent),
     runs: [],
+    workers: [
+      {
+        id: "worker-default",
+        name: "通用助手",
+        avatar: "Bot",
+        color: "blue",
+        description: "通用 AI 助手，可处理各类任务。",
+        rolePrompt: "你是宁梦未来的通用 AI 助手。你可以帮助用户完成各类任务，包括文档处理、数据分析、代码编写等。请用中文回复。",
+        skills: [],
+        model: null,
+        mcps: [],
+        memory: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    conversations: [],
+    workerUsageEvents: [],
+    workerGrowthEvents: [],
     auditEvents: [
       {
         id: `audit-${Date.now()}`,
@@ -932,6 +953,8 @@ function loadAgentosState() {
       version: 2,
       agents,
       runs: Array.isArray(state.runs) ? state.runs : [],
+      workerUsageEvents: Array.isArray(state.workerUsageEvents) ? state.workerUsageEvents : [],
+      workerGrowthEvents: Array.isArray(state.workerGrowthEvents) ? state.workerGrowthEvents : [],
       auditEvents: Array.isArray(state.auditEvents) ? state.auditEvents : [],
       securityPolicy: state.securityPolicy || defaultSecurityPolicy,
     };
@@ -967,6 +990,162 @@ function recordAudit(action, targetText, user = "platform") {
     ...(state.auditEvents || []),
   ].slice(0, 200);
   saveAgentosState(state);
+}
+
+function numberOrZero(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function estimateTokensFromText(text) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return 0;
+  return Math.max(1, Math.ceil(normalized.length / 4));
+}
+
+function readTokenUsage(payload) {
+  const tokens = payload?.part?.tokens || payload?.tokens || payload?.usage || null;
+  if (!tokens) return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+
+  if (typeof tokens === "number") {
+    return { inputTokens: 0, outputTokens: 0, totalTokens: numberOrZero(tokens) };
+  }
+
+  const inputTokens = numberOrZero(
+    tokens.input ||
+      tokens.inputTokens ||
+      tokens.prompt ||
+      tokens.promptTokens ||
+      tokens.prompt_tokens
+  );
+  const outputTokens = numberOrZero(
+    tokens.output ||
+      tokens.outputTokens ||
+      tokens.completion ||
+      tokens.completionTokens ||
+      tokens.completion_tokens
+  );
+  const totalTokens = numberOrZero(tokens.total || tokens.totalTokens || tokens.total_tokens) || inputTokens + outputTokens;
+  return { inputTokens, outputTokens, totalTokens };
+}
+
+function mergeTokenUsage(base, next) {
+  return {
+    inputTokens: numberOrZero(base.inputTokens) + numberOrZero(next.inputTokens),
+    outputTokens: numberOrZero(base.outputTokens) + numberOrZero(next.outputTokens),
+    totalTokens: numberOrZero(base.totalTokens) + numberOrZero(next.totalTokens),
+  };
+}
+
+function collectRunTokenUsage(run) {
+  return (run?.events || []).reduce((usage, event) => {
+    const payload = event?.payload;
+    if (payload?.type === "step_finish" && payload.tokens) {
+      return mergeTokenUsage(usage, { totalTokens: payload.tokens });
+    }
+    return mergeTokenUsage(usage, readTokenUsage(payload));
+  }, { inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+}
+
+function eventTextForEstimate(event) {
+  const payload = event?.payload;
+  if (typeof payload === "string") return payload;
+  if (!payload || typeof payload !== "object") return "";
+  if (typeof payload.text === "string") return payload.text;
+  if (typeof payload.payload === "string") return payload.payload;
+  if (typeof payload.message === "string") return payload.message;
+  return "";
+}
+
+function recordWorkerUsageEvent(event) {
+  const state = loadAgentosState();
+  const workerId = event.workerId || "worker-default";
+  const source = event.source || "manual";
+  const sourceId = event.sourceId || `${source}-${Date.now()}`;
+  const normalized = {
+    id: event.id || `usage-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    workerId,
+    source,
+    sourceId,
+    conversationId: event.conversationId || "",
+    title: event.title || "未命名任务",
+    status: event.status || "completed",
+    model: event.model || "",
+    inputTokens: numberOrZero(event.inputTokens),
+    outputTokens: numberOrZero(event.outputTokens),
+    totalTokens: numberOrZero(event.totalTokens),
+    estimated: Boolean(event.estimated),
+    durationMs: numberOrZero(event.durationMs),
+    startedAt: event.startedAt || new Date().toISOString(),
+    finishedAt: event.finishedAt || new Date().toISOString(),
+  };
+
+  state.workerUsageEvents = [
+    normalized,
+    ...(state.workerUsageEvents || []).filter((item) => !(item.source === source && item.sourceId === sourceId)),
+  ].slice(0, 500);
+  saveAgentosState(state);
+  return normalized;
+}
+
+function recordWorkerGrowthEvent(event) {
+  const state = loadAgentosState();
+  const workerId = event.workerId || "worker-default";
+  const type = event.type || "activity";
+  const sourceId = event.sourceId || "";
+  const normalized = {
+    id: event.id || `growth-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    workerId,
+    type,
+    title: event.title || "员工动态",
+    detail: event.detail || "",
+    sourceId,
+    occurredAt: event.occurredAt || new Date().toISOString(),
+  };
+  const duplicate = (item) =>
+    item.workerId === workerId &&
+    item.type === type &&
+    sourceId &&
+    item.sourceId === sourceId;
+  state.workerGrowthEvents = [
+    normalized,
+    ...(state.workerGrowthEvents || []).filter((item) => !duplicate(item)),
+  ].slice(0, 500);
+  saveAgentosState(state);
+  return normalized;
+}
+
+function recordAgentRunUsage(runId, agent, status) {
+  const state = loadAgentosState();
+  const run = (state.runs || []).find((item) => item.id === runId);
+  if (!run) return;
+
+  let usage = collectRunTokenUsage(run);
+  let estimated = false;
+  if (!usage.totalTokens) {
+    const outputEstimate = estimateTokensFromText((run.events || []).map(eventTextForEstimate).join("\n"));
+    usage = {
+      inputTokens: estimateTokensFromText(`${agent?.rolePrompt || ""}\n${run.message || ""}`),
+      outputTokens: outputEstimate,
+      totalTokens: 0,
+    };
+    usage.totalTokens = usage.inputTokens + usage.outputTokens;
+    estimated = true;
+  }
+
+  recordWorkerUsageEvent({
+    workerId: run.workerId || "worker-default",
+    source: "agent-run",
+    sourceId: run.id,
+    title: run.agentName || agent?.name || "Agent Run",
+    status,
+    model: run.model || agent?.model || "",
+    ...usage,
+    estimated,
+    durationMs: run.startedAt && run.finishedAt ? new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime() : 0,
+    startedAt: run.startedAt,
+    finishedAt: run.finishedAt || new Date().toISOString(),
+  });
 }
 
 function compactRun(run) {
@@ -1188,6 +1367,7 @@ function updateRunArtifacts(runId, agent, code, outputDir) {
     finishedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
+  recordAgentRunUsage(runId, agent, status);
   recordAudit(status === "completed" ? "任务执行完成" : "任务执行失败", `${agent.name} / ${runId}`, "runtime");
 }
 
@@ -1203,6 +1383,7 @@ function createContractExtractionRun(agent, body) {
     real: true,
     agentId: agent.id,
     agentName: agent.name,
+    workerId: body.workerId || agent.workerId || "worker-default",
     status: "running",
     startedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1243,6 +1424,7 @@ function createContractExtractionRun(agent, body) {
       finishedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }));
+    recordAgentRunUsage(runId, agent, "failed");
     return compactRun({ ...run, status: "failed", error: error.message });
   }
 
@@ -1274,6 +1456,7 @@ function createContractExtractionRun(agent, body) {
       finishedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }));
+    recordAgentRunUsage(runId, agent, "failed");
   });
   child.on("close", (code) => {
     appendRunEvent(runId, { type: "skill.finished", payload: { exitCode: code } });
@@ -1300,6 +1483,7 @@ function createAgentRun(body) {
     real: true,
     agentId: agent.id,
     agentName: agent.name,
+    workerId: body.workerId || agent.workerId || "worker-default",
     status: "running",
     startedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1392,6 +1576,7 @@ function createAgentRun(body) {
       finishedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }));
+    recordAgentRunUsage(runId, agent, "failed");
     recordAudit("任务执行失败", `${agent.name} / ${error.message}`, "runtime");
   });
 
@@ -1410,6 +1595,7 @@ function createAgentRun(body) {
       finishedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }));
+    recordAgentRunUsage(runId, agent, status);
     recordAudit(status === "completed" ? "任务执行完成" : "任务执行失败", `${agent.name} / ${runId}`, "runtime");
   });
 
@@ -1668,7 +1854,7 @@ function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader("content-type", "application/json; charset=utf-8");
   res.setHeader("access-control-allow-origin", "http://localhost:5174");
-  res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+  res.setHeader("access-control-allow-methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type");
   res.end(JSON.stringify(payload));
 }
@@ -1860,6 +2046,1126 @@ async function handleAdmin(req, res) {
     } catch (error) {
       sendJson(res, 500, { error: "Failed to read FutureTech skills", detail: error.message });
     }
+    return true;
+  }
+
+  // ─── 数字员工（Worker）API ────────────────────────────────────────────
+
+  const WORKER_MD_FILES = [
+    "IDENTITY.md", "PERSONA.md", "TOOLS.md", "MEMORY.md",
+    "WORK_STYLES.md", "BIBLE.md", "CORE_CAPABILITIES.md",
+    "DELIVERY_COMMITMENTS.md", "USER.md",
+  ];
+
+  function loadWorkerDir(workerId) {
+    const dir = join(workersDir, workerId);
+    const qoderDir = join(dir, ".qoder");
+    mkdirSync(qoderDir, { recursive: true });
+    return { dir, qoderDir };
+  }
+
+  function readWorkerMarkdowns(qoderDir) {
+    const files = {};
+    for (const name of WORKER_MD_FILES) {
+      const filePath = join(qoderDir, name);
+      files[name.replace(".md", "")] = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
+    }
+    return files;
+  }
+
+  function writeWorkerMarkdown(qoderDir, filename, content) {
+    writeFileSync(join(qoderDir, filename), content, "utf8");
+  }
+
+  function readWorkerMeta(workerId) {
+    const metaPath = join(workersDir, workerId, "meta.json");
+    if (!existsSync(metaPath)) return null;
+    try { return JSON.parse(readFileSync(metaPath, "utf8")); } catch { return null; }
+  }
+
+  function writeWorkerMeta(workerId, meta) {
+    const { dir } = loadWorkerDir(workerId);
+    writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
+  }
+
+  function seedDefaultWorker() {
+    const defaultId = "worker-default";
+    const metaPath = join(workersDir, defaultId, "meta.json");
+    if (existsSync(metaPath)) return;
+    const now = new Date().toISOString();
+    const meta = {
+      id: defaultId, name: "通用助手", avatar: "Bot", color: "blue",
+      description: "通用 AI 助手，可处理各类任务。", model: null, employeeType: "",
+      createdAt: now, updatedAt: now,
+    };
+    const { qoderDir } = loadWorkerDir(defaultId);
+    writeWorkerMeta(defaultId, meta);
+    writeWorkerMarkdown(qoderDir, "IDENTITY.md", "# Identity — 通用助手\n\n你是宁梦未来的通用 AI 助手。你可以帮助用户完成各类任务，包括文档处理、数据分析、代码编写等。请用中文回复。\n\n## 能力边界\n\n| 能做 | 不做 |\n|------|------|\n| 文档处理、数据分析、代码编写、问题解答 | 越权操作、破坏性命令 |\n");
+    writeWorkerMarkdown(qoderDir, "PERSONA.md", "# Persona — 通用助手\n\n## 性格特征\n\n- 友好耐心\n- 逻辑清晰\n- 注重细节\n");
+    writeWorkerMarkdown(qoderDir, "TOOLS.md", "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件内容\n- **Write**: 创建或覆盖文件\n- **Edit**: 修改文件部分内容\n- **Bash**: 执行 shell 命令\n");
+    writeWorkerMarkdown(qoderDir, "MEMORY.md", "# Memory Index\n\n## User Preferences\n\n## Working Rules\n\n## Feedback History\n");
+    writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", '[{"name":"代码先行","description":"小改动直接做，大改动先简述思路再实现"}]');
+    writeWorkerMarkdown(qoderDir, "BIBLE.md", "");
+    writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", "");
+    writeWorkerMarkdown(qoderDir, "DELIVERY_COMMITMENTS.md", "");
+    writeWorkerMarkdown(qoderDir, "USER.md", "");
+    mkdirSync(join(qoderDir, "memory"), { recursive: true });
+    mkdirSync(join(qoderDir, "sessions"), { recursive: true });
+  }
+
+  function listAllWorkers() {
+    mkdirSync(workersDir, { recursive: true });
+    seedDefaultWorker();
+    const dirs = readdirSync(workersDir).filter((d) => {
+      try { return statSync(join(workersDir, d)).isDirectory(); } catch { return false; }
+    });
+    return dirs.map((id) => readWorkerMeta(id)).filter(Boolean).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  }
+
+  function dateKey(value) {
+    const date = value ? new Date(value) : new Date();
+    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function formatDayLabel(key) {
+    const date = new Date(`${key}T00:00:00Z`);
+    return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+  }
+
+  function buildDayKeys(days) {
+    const list = [];
+    const now = new Date();
+    for (let index = days - 1; index >= 0; index -= 1) {
+      const date = new Date(now);
+      date.setUTCDate(now.getUTCDate() - index);
+      list.push(date.toISOString().slice(0, 10));
+    }
+    return list;
+  }
+
+  function startOfTodayMs() {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  function startOfWeekMs() {
+    return Date.now() - 6 * 24 * 60 * 60 * 1000;
+  }
+
+  function countMemory(markdowns, meta) {
+    const memoryLines = String(markdowns.MEMORY || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("- ") || /^#+\s+/.test(line));
+    return memoryLines.length + ((meta.memory || []).length || 0);
+  }
+
+  const modelCostRates = {
+    "minimax/MiniMax-M2.7": { inputPerMillion: 0.4, outputPerMillion: 1.2, currency: "USD" },
+    "seuapi/gpt-5.4": { inputPerMillion: 1.25, outputPerMillion: 10, currency: "USD" },
+  };
+
+  function parseMarkdownSummary(content, fallback = []) {
+    const text = String(content || "").trim();
+    if (!text) return fallback;
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !line.startsWith("#"))
+      .map((line) => line.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "").trim())
+      .filter((line) => line && !/^\|?[-:\s|]+\|?$/.test(line))
+      .filter((line) => !line.includes("|------"));
+    return lines.slice(0, 5);
+  }
+
+  function parseWorkStyles(content) {
+    const text = String(content || "").trim();
+    if (!text) return [];
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => [item.name, item.description].filter(Boolean).join("："))
+          .filter(Boolean)
+          .slice(0, 5);
+      }
+    } catch {
+      // Fall through to markdown parsing.
+    }
+    return parseMarkdownSummary(text);
+  }
+
+  function eventTimeMs(value) {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return 0;
+    return date.getTime();
+  }
+
+  function profileCompletenessFor(meta, markdowns, skills, connectors) {
+    const checks = [
+      { key: "name", label: "员工名称", complete: Boolean(meta.name && meta.name !== "新数字员工") },
+      { key: "role", label: "岗位角色", complete: Boolean(meta.employeeType || meta.role) },
+      { key: "description", label: "员工简介", complete: Boolean(meta.description) },
+      { key: "capabilities", label: "核心能力", complete: parseMarkdownSummary(markdowns.CORE_CAPABILITIES).length > 0 },
+      { key: "memory", label: "长期记忆", complete: countMemory(markdowns, meta) > 0 },
+      { key: "skills", label: "绑定 Skill", complete: (skills || []).length > 0 },
+      { key: "connectors", label: "连接器", complete: (connectors || []).length > 0 },
+    ];
+    const completed = checks.filter((item) => item.complete).length;
+    const missingFields = checks.filter((item) => !item.complete).map((item) => item.label);
+    return {
+      score: Math.round((completed / checks.length) * 100),
+      missingFields,
+      nextActions: missingFields.slice(0, 3).map((label) => `补充${label}`),
+    };
+  }
+
+  function buildActivity(workerId, usageEvents, conversations, runs, tasks, triggers, projects) {
+    const heatmapKeys = buildDayKeys(365);
+    const heatmapMap = Object.fromEntries(heatmapKeys.map((key) => [key, {
+      date: key,
+      label: formatDayLabel(key),
+      count: 0,
+      intensity: 0,
+      sources: { chat: 0, run: 0, task: 0, automation: 0 },
+    }]));
+    const addActivity = (value, source, weight = 1) => {
+      if (!eventTimeMs(value)) return;
+      const key = dateKey(value);
+      if (!heatmapMap[key]) return;
+      heatmapMap[key].count += weight;
+      if (source && heatmapMap[key].sources[source] !== undefined) {
+        heatmapMap[key].sources[source] += weight;
+      }
+    };
+
+    for (const event of usageEvents) {
+      addActivity(event.finishedAt || event.startedAt, event.source === "chat" ? "chat" : "run", 1);
+    }
+    for (const conv of conversations) addActivity(conv.updatedAt || conv.createdAt, "chat", 1);
+    for (const run of runs) addActivity(run.finishedAt || run.updatedAt || run.startedAt, "run", 1);
+    for (const task of tasks) addActivity(task.updatedAt || task.createdAt, "task", 1);
+    for (const trigger of triggers) {
+      if (trigger.lastRunAt) addActivity(trigger.lastRunAt, "automation", Math.max(1, numberOrZero(trigger.runCount)));
+      else addActivity(trigger.updatedAt || trigger.createdAt, "automation", 1);
+    }
+
+    const maxCount = Math.max(1, ...Object.values(heatmapMap).map((item) => item.count));
+    const heatmapDays = Object.values(heatmapMap).map((item) => ({
+      ...item,
+      intensity: item.count === 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((item.count / maxCount) * 4))),
+    }));
+
+    return {
+      awakeDays: heatmapDays.filter((item) => item.count > 0).length,
+      heatmapDays,
+      summary: {
+        automations: triggers.length,
+        tasks: tasks.length + runs.length,
+        projects: projects.length,
+        conversations: conversations.length,
+        maxDailyWork: maxCount,
+        workerId,
+      },
+    };
+  }
+
+  function growthTitle(type) {
+    const map = {
+      created: "员工创建",
+      profile: "档案更新",
+      memory: "记忆更新",
+      skill: "Skill 更新",
+      connector: "连接器变化",
+      permission: "权限变化",
+      project: "项目更新",
+      automation: "自动化更新",
+      work: "完成关键工作",
+    };
+    return map[type] || "员工动态";
+  }
+
+  function buildGrowth(meta, markdowns, profileSummary, usageEvents, growthEvents) {
+    const inferred = [
+      {
+        id: `inferred-created-${meta.id}`,
+        workerId: meta.id,
+        type: "created",
+        title: "员工创建",
+        detail: `${meta.name || "数字员工"} 已加入 AgentOS。`,
+        sourceId: meta.id,
+        occurredAt: meta.createdAt,
+      },
+    ];
+    for (const event of usageEvents.filter((item) => item.status === "completed").slice(0, 3)) {
+      inferred.push({
+        id: `inferred-work-${event.id}`,
+        workerId: meta.id,
+        type: "work",
+        title: "完成关键工作",
+        detail: event.title || "完成一次工作记录",
+        sourceId: event.sourceId || event.id,
+        occurredAt: event.finishedAt || event.startedAt,
+      });
+    }
+    const seenRecent = new Set();
+    const recent = [...growthEvents, ...inferred]
+      .filter((item) => item.occurredAt)
+      .filter((item) => {
+        const key = `${item.type || "activity"}:${item.sourceId || item.id || item.occurredAt}`;
+        if (seenRecent.has(key)) return false;
+        seenRecent.add(key);
+        return true;
+      })
+      .sort((a, b) => eventTimeMs(b.occurredAt) - eventTimeMs(a.occurredAt))
+      .slice(0, 8)
+      .map((item) => ({ ...item, title: item.title || growthTitle(item.type) }));
+
+    const learned = [
+      ...profileSummary.capabilities.map((item) => ({ title: "核心能力", detail: item })),
+      ...profileSummary.workStyles.map((item) => ({ title: "工作风格", detail: item })),
+      ...(meta.skills || []).map((item) => ({ title: "已绑定 Skill", detail: item })),
+      ...String(markdowns.MEMORY || "").split(/\r?\n/).filter((line) => line.trim()).slice(0, 3).map((line) => ({ title: "记忆沉淀", detail: line.replace(/^#+\s+/, "").replace(/^[-*]\s+/, "") })),
+    ].filter((item, index, list) => item.detail && list.findIndex((candidate) => candidate.detail === item.detail) === index).slice(0, 5);
+
+    return {
+      recent,
+      learned,
+      summary: {
+        eventCount: growthEvents.length,
+        learnedCount: learned.length,
+        lastGrowthAt: recent[0]?.occurredAt || meta.updatedAt || meta.createdAt,
+      },
+    };
+  }
+
+  function costForEvent(event) {
+    const rate = modelCostRates[event.model || ""];
+    if (!rate) {
+      return { amount: 0, currency: "USD", rateConfigured: false };
+    }
+    const inputCost = (numberOrZero(event.inputTokens) / 1_000_000) * rate.inputPerMillion;
+    const outputCost = (numberOrZero(event.outputTokens) / 1_000_000) * rate.outputPerMillion;
+    return {
+      amount: inputCost + outputCost,
+      currency: rate.currency || "USD",
+      rateConfigured: true,
+    };
+  }
+
+  function compactWorkItem(item) {
+    return {
+      id: item.id,
+      source: item.source,
+      sourceId: item.sourceId,
+      title: item.title,
+      status: item.status,
+      model: item.model || "",
+      inputTokens: numberOrZero(item.inputTokens),
+      outputTokens: numberOrZero(item.outputTokens),
+      totalTokens: numberOrZero(item.totalTokens),
+      estimated: Boolean(item.estimated),
+      durationMs: numberOrZero(item.durationMs),
+      startedAt: item.startedAt || item.finishedAt,
+      finishedAt: item.finishedAt || item.startedAt,
+      cost: costForEvent(item).amount,
+      rateConfigured: costForEvent(item).rateConfigured,
+    };
+  }
+
+  function groupWorkItems(items) {
+    const groups = {
+      running: [],
+      completed: [],
+      failed: [],
+      idle: [],
+    };
+    for (const item of items) {
+      if (["running", "queued"].includes(item.status)) groups.running.push(item);
+      else if (item.status === "completed") groups.completed.push(item);
+      else if (item.status === "failed") groups.failed.push(item);
+      else groups.idle.push(item);
+    }
+    return groups;
+  }
+
+  function compactConversation(conv) {
+    const lastMessage = (conv.messages || [])[conv.messages?.length - 1] || null;
+    return {
+      id: conv.id,
+      title: conv.title,
+      workerId: conv.workerId,
+      messageCount: (conv.messages || []).length,
+      lastMessage: lastMessage?.content?.slice(0, 120) || "",
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt,
+    };
+  }
+
+  function buildWorkerOverview(workerId, range = "7d") {
+    const meta = readWorkerMeta(workerId);
+    if (!meta) return null;
+
+    const state = loadAgentosState();
+    const { qoderDir } = loadWorkerDir(workerId);
+    const markdowns = readWorkerMarkdowns(qoderDir);
+    const projects = (state.projects || []).filter((item) => item.workerId === workerId);
+    const triggers = (state.triggers || []).filter((item) => item.workerId === workerId);
+    const tasks = (state.tasks || []).filter((item) => item.workerId === workerId);
+    const connectors = (state.connectors || []).filter((item) => item.workerId === workerId);
+    const conversations = (state.conversations || []).filter((item) => item.workerId === workerId);
+    const runs = (state.runs || []).filter((item) => item.workerId === workerId || (workerId === "worker-default" && !item.workerId));
+    const usageEvents = (state.workerUsageEvents || []).filter((item) => item.workerId === workerId);
+    const growthEvents = (state.workerGrowthEvents || []).filter((item) => item.workerId === workerId);
+    const todayMs = startOfTodayMs();
+    const weekMs = startOfWeekMs();
+    const todayEvents = usageEvents.filter((item) => new Date(item.finishedAt || item.startedAt).getTime() >= todayMs);
+    const weekEvents = usageEvents.filter((item) => new Date(item.finishedAt || item.startedAt).getTime() >= weekMs);
+    const finishedEvents = usageEvents.filter((item) => ["completed", "failed"].includes(item.status));
+    const completedEvents = finishedEvents.filter((item) => item.status === "completed");
+    const durationEvents = usageEvents.filter((item) => item.durationMs > 0);
+    const days = range === "30d" ? 30 : 7;
+    const dayKeys = buildDayKeys(days);
+    const trendMap = Object.fromEntries(dayKeys.map((key) => [key, { date: key, label: formatDayLabel(key), totalTokens: 0, cost: 0, runs: 0, estimated: false, rateConfigured: false }]));
+
+    for (const event of usageEvents) {
+      const key = dateKey(event.finishedAt || event.startedAt);
+      if (!trendMap[key]) continue;
+      const cost = costForEvent(event);
+      trendMap[key].totalTokens += numberOrZero(event.totalTokens);
+      trendMap[key].cost += cost.amount;
+      trendMap[key].runs += 1;
+      trendMap[key].estimated = trendMap[key].estimated || Boolean(event.estimated);
+      trendMap[key].rateConfigured = trendMap[key].rateConfigured || cost.rateConfigured;
+    }
+
+    const recentUsage = usageEvents.map(compactWorkItem);
+    const usageConversationIds = new Set(usageEvents.map((event) => event.conversationId).filter(Boolean));
+    const usageConversationTitles = new Set(usageEvents.filter((event) => event.source === "chat").map((event) => event.title).filter(Boolean));
+    const recentConversations = conversations.filter((conv) => !usageConversationIds.has(conv.id) && !usageConversationTitles.has(conv.title)).map((conv) => ({
+      id: conv.id,
+      source: "chat",
+      sourceId: conv.id,
+      title: conv.title,
+      status: "active",
+      model: "",
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      estimated: true,
+      durationMs: 0,
+      startedAt: conv.createdAt,
+      finishedAt: conv.updatedAt,
+      cost: 0,
+      rateConfigured: false,
+    }));
+    const recentRuns = runs.map((run) => ({
+      id: run.id,
+      source: "agent-run",
+      sourceId: run.id,
+      title: run.agentName || "Agent Run",
+      status: run.status,
+      model: run.model || "",
+      inputTokens: collectRunTokenUsage(run).inputTokens,
+      outputTokens: collectRunTokenUsage(run).outputTokens,
+      totalTokens: collectRunTokenUsage(run).totalTokens,
+      estimated: false,
+      durationMs: run.startedAt && run.finishedAt ? new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime() : 0,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt || run.updatedAt || run.startedAt,
+      cost: costForEvent(run).amount,
+      rateConfigured: costForEvent(run).rateConfigured,
+    }));
+    const recentWork = [...recentUsage, ...recentConversations, ...recentRuns]
+      .sort((a, b) => new Date(b.finishedAt || 0).getTime() - new Date(a.finishedAt || 0).getTime())
+      .filter((item, index, arr) => arr.findIndex((candidate) => candidate.source === item.source && candidate.sourceId === item.sourceId) === index)
+      .slice(0, 10);
+
+    const sum = (items, field) => items.reduce((total, item) => total + numberOrZero(item[field]), 0);
+    const usageWithCost = usageEvents.map((event) => ({ ...event, cost: costForEvent(event).amount, rateConfigured: costForEvent(event).rateConfigured }));
+    const configuredCostEvents = usageWithCost.filter((item) => item.rateConfigured);
+    const totalCost = sum(usageWithCost, "cost");
+    const todayCost = sum(todayEvents.map((event) => ({ cost: costForEvent(event).amount })), "cost");
+    const weekCost = sum(weekEvents.map((event) => ({ cost: costForEvent(event).amount })), "cost");
+    const timeline = recentWork.map((item) => ({ ...item, cost: numberOrZero(item.cost), rateConfigured: Boolean(item.rateConfigured) }));
+    const profileSummary = {
+      capabilities: parseMarkdownSummary(markdowns.CORE_CAPABILITIES, parseMarkdownSummary(markdowns.IDENTITY, ["处理对话任务", "调用绑定 Skill", "沉淀长期记忆"])),
+      workStyles: parseWorkStyles(markdowns.WORK_STYLES).length ? parseWorkStyles(markdowns.WORK_STYLES) : ["先确认目标，再执行任务", "结果优先，必要时提示风险"],
+      riskLabels: [
+        meta.permissions ? "权限已配置" : "默认权限",
+        (meta.skills || []).length ? "Skill 已绑定" : "待绑定 Skill",
+        connectors.length ? "连接器已接入" : "未接入连接器",
+      ],
+      emptyHints: {
+        capabilities: "补充核心能力后，员工主页会更像正式岗位档案。",
+        workStyles: "补充工作风格后，执行边界会更清楚。",
+        workRecord: "完成一次对话或任务后，会自动沉淀第一条工作记录。",
+      },
+    };
+    const activity = buildActivity(workerId, usageEvents, conversations, runs, tasks, triggers, projects);
+    const profileCompleteness = profileCompletenessFor(meta, markdowns, meta.skills || [], connectors);
+    const growth = buildGrowth(meta, markdowns, profileSummary, usageEvents, growthEvents);
+
+    return {
+      worker: {
+        ...meta,
+        role: meta.employeeType || meta.role || "数字员工",
+        status: meta.status || "online",
+        markdowns,
+      },
+      metrics: {
+        todayTokens: sum(todayEvents, "totalTokens"),
+        weekTokens: sum(weekEvents, "totalTokens"),
+        totalTokens: sum(usageEvents, "totalTokens"),
+        inputTokens: sum(usageEvents, "inputTokens"),
+        outputTokens: sum(usageEvents, "outputTokens"),
+        estimated: usageEvents.some((item) => item.estimated),
+        taskCount: tasks.length + runs.length,
+        automationCount: triggers.length,
+        projectCount: projects.length,
+        conversationCount: conversations.length,
+        runCount: runs.length,
+        successRate: finishedEvents.length ? Math.round((completedEvents.length / finishedEvents.length) * 100) : 0,
+        averageDurationMs: durationEvents.length ? Math.round(sum(durationEvents, "durationMs") / durationEvents.length) : 0,
+        averageTokens: usageEvents.length ? Math.round(sum(usageEvents, "totalTokens") / usageEvents.length) : 0,
+        lastActiveAt: usageEvents[0]?.finishedAt || conversations[0]?.updatedAt || meta.updatedAt || meta.createdAt,
+      },
+      trend: Object.values(trendMap),
+      recentWork,
+      profileSummary,
+      profileCompleteness,
+      cost: {
+        todayCost,
+        weekCost,
+        totalCost,
+        currency: configuredCostEvents[0] ? costForEvent(configuredCostEvents[0]).currency : "USD",
+        estimated: usageEvents.some((item) => item.estimated),
+        rateConfigured: configuredCostEvents.length > 0,
+      },
+      workRecord: {
+        timeline,
+        taskGroups: groupWorkItems(timeline),
+      },
+      activity,
+      growth,
+      resources: {
+        projects,
+        automations: triggers,
+        tasks,
+        connectors,
+        conversations: conversations.map(compactConversation).slice(0, 10),
+        runs: runs.map(compactRun).slice(0, 10),
+      },
+      memory: {
+        count: countMemory(markdowns, meta),
+        preview: String(markdowns.MEMORY || "").split(/\r?\n/).filter(Boolean).slice(0, 8),
+      },
+      skills: {
+        count: (meta.skills || []).length,
+        bound: meta.skills || [],
+      },
+      permissions: {
+        summary: meta.permissions ? "已配置权限边界" : "默认安全边界",
+        items: meta.permissions || {
+          filesystem: "项目与输入文件",
+          terminal: "需要确认",
+          network: "默认关闭",
+        },
+      },
+    };
+  }
+
+  if (url.pathname === "/futuretech-admin/workers" && req.method === "GET") {
+    sendJson(res, 200, { workers: listAllWorkers() });
+    return true;
+  }
+
+  if (url.pathname === "/futuretech-admin/workers" && req.method === "POST") {
+    const body = await readRequestJson(req);
+    const id = `w-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const now = new Date().toISOString();
+    const meta = {
+      id, name: body.name || "新数字员工",
+      avatar: body.avatar || "Bot", color: body.color || "blue",
+      description: body.description || "", model: body.model || null,
+      employeeType: body.employeeType || "",
+      createdAt: now, updatedAt: now,
+    };
+    const { qoderDir } = loadWorkerDir(id);
+    writeWorkerMeta(id, meta);
+    writeWorkerMarkdown(qoderDir, "IDENTITY.md", body.identity || `# Identity — ${meta.name}\n\n${meta.description}\n`);
+    writeWorkerMarkdown(qoderDir, "PERSONA.md", body.persona || `# Persona — ${meta.name}\n\n## Character Traits\n\n- Helpful and precise\n`);
+    writeWorkerMarkdown(qoderDir, "TOOLS.md", body.tools || "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件\n- **Write**: 写入文件\n- **Bash**: 执行命令\n");
+    writeWorkerMarkdown(qoderDir, "MEMORY.md", body.memoryMd || "# Memory Index\n\n## User Preferences\n\n## Working Rules\n\n## Feedback History\n");
+    writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", body.workStyles || "[]");
+    writeWorkerMarkdown(qoderDir, "BIBLE.md", body.bible || "");
+    writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", body.coreCapabilities || "");
+    writeWorkerMarkdown(qoderDir, "DELIVERY_COMMITMENTS.md", body.deliveryCommitments || "");
+    writeWorkerMarkdown(qoderDir, "USER.md", body.userMd || "");
+    mkdirSync(join(qoderDir, "memory"), { recursive: true });
+    mkdirSync(join(qoderDir, "sessions"), { recursive: true });
+    const state = loadAgentosState();
+    state.workers = [meta, ...(state.workers || []).filter((item) => item.id !== id)];
+    saveAgentosState(state);
+    recordWorkerGrowthEvent({
+      workerId: id,
+      type: "created",
+      title: "员工创建",
+      detail: `${meta.name} 已加入 AgentOS。`,
+      sourceId: id,
+      occurredAt: now,
+    });
+    recordAudit("创建数字员工", meta.name, "operator");
+    sendJson(res, 200, { worker: meta });
+    return true;
+  }
+
+  // Worker sub-resource routes: /futuretech-admin/workers/:id[/subpath]
+  const workerRouteMatch = url.pathname.match(/^\/futuretech-admin\/workers\/([^/]+)(.*)?$/);
+  if (workerRouteMatch) {
+    const workerId = workerRouteMatch[1];
+    const subPath = (workerRouteMatch[2] || "").replace(/\/$/, "");
+    const meta = readWorkerMeta(workerId);
+
+    if (!meta) {
+      sendJson(res, 404, { error: "Worker not found" });
+      return true;
+    }
+
+    if (subPath === "/overview" && req.method === "GET") {
+      const overview = buildWorkerOverview(workerId, url.searchParams.get("range") || "7d");
+      if (!overview) {
+        sendJson(res, 404, { error: "Worker not found" });
+        return true;
+      }
+      sendJson(res, 200, overview);
+      return true;
+    }
+
+    // GET /workers/:id — full detail with markdown files
+    if (!subPath && req.method === "GET") {
+      const { qoderDir } = loadWorkerDir(workerId);
+      const markdowns = readWorkerMarkdowns(qoderDir);
+      const catalog = await listOpencodeSkills();
+      sendJson(res, 200, { worker: { ...meta, markdowns, availableSkills: catalog.skills || [] } });
+      return true;
+    }
+
+    // PUT /workers/:id — update meta
+    if (!subPath && req.method === "PUT") {
+      const body = await readRequestJson(req);
+      const updated = { ...meta, ...body, id: meta.id, createdAt: meta.createdAt, updatedAt: new Date().toISOString() };
+      writeWorkerMeta(workerId, updated);
+      const state = loadAgentosState();
+      state.workers = [updated, ...(state.workers || []).filter((item) => item.id !== workerId)];
+      saveAgentosState(state);
+      recordWorkerGrowthEvent({
+        workerId,
+        type: "profile",
+        title: "档案更新",
+        detail: `${updated.name} 的基础档案已更新。`,
+        sourceId: `${workerId}-${updated.updatedAt}`,
+        occurredAt: updated.updatedAt,
+      });
+      if (JSON.stringify(meta.skills || []) !== JSON.stringify(updated.skills || [])) {
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "skill",
+          title: "Skill 更新",
+          detail: (updated.skills || []).length ? `已绑定 ${(updated.skills || []).length} 个 Skill。` : "已清空绑定 Skill。",
+          sourceId: `${workerId}-skills-${updated.updatedAt}`,
+          occurredAt: updated.updatedAt,
+        });
+      }
+      if (JSON.stringify(meta.permissions || null) !== JSON.stringify(updated.permissions || null)) {
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "permission",
+          title: "权限变化",
+          detail: updated.permissions ? "权限边界已更新。" : "权限边界恢复默认。",
+          sourceId: `${workerId}-permissions-${updated.updatedAt}`,
+          occurredAt: updated.updatedAt,
+        });
+      }
+      recordAudit("更新数字员工", updated.name, "operator");
+      sendJson(res, 200, { worker: updated });
+      return true;
+    }
+
+    // DELETE /workers/:id
+    if (!subPath && req.method === "DELETE") {
+      if (workerId === "worker-default") {
+        sendJson(res, 400, { error: "Default worker cannot be deleted" });
+        return true;
+      }
+      try { const { rmSync } = await import("node:fs"); rmSync(join(workersDir, workerId), { recursive: true, force: true }); } catch {}
+      const state = loadAgentosState();
+      state.workers = (state.workers || []).filter((item) => item.id !== workerId);
+      state.workerGrowthEvents = (state.workerGrowthEvents || []).filter((item) => item.workerId !== workerId);
+      state.workerUsageEvents = (state.workerUsageEvents || []).filter((item) => item.workerId !== workerId);
+      saveAgentosState(state);
+      recordAudit("删除数字员工", meta.name, "operator");
+      sendJson(res, 200, { ok: true });
+      return true;
+    }
+
+    // GET/PUT /workers/:id/markdown/:filename — read/write markdown files
+    const mdMatch = subPath.match(/^\/markdown\/(.+)$/);
+    if (mdMatch) {
+      const filename = mdMatch[1];
+      if (!WORKER_MD_FILES.includes(filename)) {
+        sendJson(res, 400, { error: "Invalid filename" });
+        return true;
+      }
+      const { qoderDir } = loadWorkerDir(workerId);
+      if (req.method === "GET") {
+        const content = existsSync(join(qoderDir, filename)) ? readFileSync(join(qoderDir, filename), "utf8") : "";
+        sendJson(res, 200, { filename, content });
+        return true;
+      }
+      if (req.method === "PUT") {
+        const body = await readRequestJson(req);
+        writeWorkerMarkdown(qoderDir, filename, body.content || "");
+        const now = new Date().toISOString();
+        const growthType = filename === "MEMORY.md"
+          ? "memory"
+          : filename === "CORE_CAPABILITIES.md" || filename === "WORK_STYLES.md" || filename === "IDENTITY.md"
+            ? "profile"
+            : "activity";
+        recordWorkerGrowthEvent({
+          workerId,
+          type: growthType,
+          title: growthType === "memory" ? "记忆更新" : "员工资料更新",
+          detail: `${filename} 已更新。`,
+          sourceId: `${workerId}-${filename}-${now}`,
+          occurredAt: now,
+        });
+        sendJson(res, 200, { filename, ok: true });
+        return true;
+      }
+    }
+
+    // ─── Projects API ───
+    if (subPath === "/projects") {
+      const state = loadAgentosState();
+      const projects = (state.projects || []).filter((p) => p.workerId === workerId);
+      if (req.method === "GET") {
+        sendJson(res, 200, { projects });
+        return true;
+      }
+      if (req.method === "POST") {
+        const body = await readRequestJson(req);
+        const project = {
+          id: `proj-${Date.now().toString(36)}`,
+          workerId, name: body.name || "新项目",
+          status: "active", ephemeral: false,
+          description: body.description || "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        state.projects = [...(state.projects || []), project];
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "project",
+          title: "项目更新",
+          detail: `新增项目：${project.name}`,
+          sourceId: project.id,
+          occurredAt: project.createdAt,
+        });
+        sendJson(res, 200, { project });
+        return true;
+      }
+    }
+
+    // ─── Triggers API ───
+    if (subPath === "/triggers") {
+      const state = loadAgentosState();
+      const triggers = (state.triggers || []).filter((t) => t.workerId === workerId);
+      if (req.method === "GET") {
+        sendJson(res, 200, { triggers });
+        return true;
+      }
+      if (req.method === "POST") {
+        const body = await readRequestJson(req);
+        const trigger = {
+          id: `trig-${Date.now().toString(36)}`,
+          workerId, name: body.name || "新触发器",
+          prompt: body.prompt || "", model: body.model || "",
+          enabled: body.enabled !== false,
+          triggerKind: body.triggerKind || "manual",
+          scheduleType: body.scheduleType || "",
+          lastRunStatus: null, lastRunAt: null, nextRunAt: null,
+          runCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        state.triggers = [...(state.triggers || []), trigger];
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "automation",
+          title: "自动化更新",
+          detail: `新增自动化：${trigger.name}`,
+          sourceId: trigger.id,
+          occurredAt: trigger.createdAt,
+        });
+        sendJson(res, 200, { trigger });
+        return true;
+      }
+    }
+
+    const trigMatch = subPath.match(/^\/triggers\/([^/]+)$/);
+    if (trigMatch) {
+      const trigId = trigMatch[1];
+      const state = loadAgentosState();
+      const trigger = (state.triggers || []).find((t) => t.id === trigId);
+      if (!trigger) { sendJson(res, 404, { error: "Trigger not found" }); return true; }
+      if (req.method === "GET") { sendJson(res, 200, { trigger }); return true; }
+      if (req.method === "PUT") {
+        const body = await readRequestJson(req);
+        Object.assign(trigger, body, { id: trigger.id, workerId: trigger.workerId, updatedAt: new Date().toISOString() });
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "automation",
+          title: "自动化更新",
+          detail: `自动化已更新：${trigger.name}`,
+          sourceId: `${trigger.id}-${trigger.updatedAt}`,
+          occurredAt: trigger.updatedAt,
+        });
+        sendJson(res, 200, { trigger });
+        return true;
+      }
+      if (req.method === "DELETE") {
+        state.triggers = (state.triggers || []).filter((t) => t.id !== trigId);
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "automation",
+          title: "自动化更新",
+          detail: `自动化已删除：${trigger.name}`,
+          sourceId: `${trigId}-deleted-${Date.now()}`,
+        });
+        sendJson(res, 200, { ok: true });
+        return true;
+      }
+    }
+
+    // ─── Tasks API ───
+    if (subPath === "/tasks") {
+      const state = loadAgentosState();
+      const tasks = (state.tasks || []).filter((t) => t.workerId === workerId);
+      sendJson(res, 200, { tasks });
+      return true;
+    }
+
+    // ─── Connectors API ───
+    if (subPath === "/connectors") {
+      const state = loadAgentosState();
+      const connectors = (state.connectors || []).filter((c) => c.workerId === workerId);
+      if (req.method === "GET") {
+        sendJson(res, 200, { connectors });
+        return true;
+      }
+      if (req.method === "POST") {
+        const body = await readRequestJson(req);
+        const connector = {
+          id: `conn-${Date.now().toString(36)}`,
+          workerId, name: body.name || "新连接器",
+          type: body.type || "generic", enabled: true,
+          config: body.config || {},
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        state.connectors = [...(state.connectors || []), connector];
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "connector",
+          title: "连接器变化",
+          detail: `新增连接器：${connector.name}`,
+          sourceId: connector.id,
+          occurredAt: connector.createdAt,
+        });
+        sendJson(res, 200, { connector });
+        return true;
+      }
+    }
+
+    const connMatch = subPath.match(/^\/connectors\/([^/]+)$/);
+    if (connMatch) {
+      const connId = connMatch[1];
+      const state = loadAgentosState();
+      const connector = (state.connectors || []).find((c) => c.id === connId);
+      if (!connector) { sendJson(res, 404, { error: "Connector not found" }); return true; }
+      if (req.method === "PUT") {
+        const body = await readRequestJson(req);
+        Object.assign(connector, body, { id: connector.id, workerId: connector.workerId, updatedAt: new Date().toISOString() });
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "connector",
+          title: "连接器变化",
+          detail: `连接器已更新：${connector.name}`,
+          sourceId: `${connector.id}-${connector.updatedAt}`,
+          occurredAt: connector.updatedAt,
+        });
+        sendJson(res, 200, { connector });
+        return true;
+      }
+      if (req.method === "DELETE") {
+        state.connectors = (state.connectors || []).filter((c) => c.id !== connId);
+        saveAgentosState(state);
+        recordWorkerGrowthEvent({
+          workerId,
+          type: "connector",
+          title: "连接器变化",
+          detail: `连接器已删除：${connector.name}`,
+          sourceId: `${connId}-deleted-${Date.now()}`,
+        });
+        sendJson(res, 200, { ok: true });
+        return true;
+      }
+    }
+  }
+
+  if (url.pathname === "/futuretech-admin/conversations" && req.method === "GET") {
+    const state = loadAgentosState();
+    let conversations = state.conversations || [];
+    const workerId = url.searchParams.get("workerId");
+    if (workerId) {
+      conversations = conversations.filter((c) => c.workerId === workerId);
+    }
+    sendJson(res, 200, {
+      conversations: conversations.map(({ messages, ...rest }) => rest),
+    });
+    return true;
+  }
+
+  if (url.pathname === "/futuretech-admin/conversations" && req.method === "POST") {
+    const body = await readRequestJson(req);
+    const state = loadAgentosState();
+    const worker = readWorkerMeta(body.workerId || "worker-default") || (state.workers || []).find((w) => w.id === body.workerId);
+    const conversation = {
+      id: `conv-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      workerId: body.workerId || "worker-default",
+      workerName: worker?.name || "通用助手",
+      title: body.title || "新对话",
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    state.conversations = [...(state.conversations || []), conversation];
+    saveAgentosState(state);
+    sendJson(res, 200, { conversation: { ...conversation } });
+    return true;
+  }
+
+  if (url.pathname.startsWith("/futuretech-admin/conversations/") && !url.pathname.includes("/messages") && req.method === "GET") {
+    const convId = url.pathname.split("/").pop();
+    const state = loadAgentosState();
+    const conv = (state.conversations || []).find((c) => c.id === convId);
+    if (!conv) {
+      sendJson(res, 404, { error: "Conversation not found" });
+      return true;
+    }
+    sendJson(res, 200, { conversation: conv });
+    return true;
+  }
+
+  if (url.pathname.startsWith("/futuretech-admin/conversations/") && !url.pathname.includes("/messages") && req.method === "DELETE") {
+    const convId = url.pathname.split("/").pop();
+    const state = loadAgentosState();
+    state.conversations = (state.conversations || []).filter((c) => c.id !== convId);
+    saveAgentosState(state);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+
+  // ─── SSE 流式消息端点 ─────────────────────────────────────────────────
+
+  if (url.pathname.startsWith("/futuretech-admin/conversations/") && url.pathname.endsWith("/messages") && req.method === "POST") {
+    const convId = url.pathname.split("/")[3];
+    const body = await readRequestJson(req);
+    const state = loadAgentosState();
+    const conv = (state.conversations || []).find((c) => c.id === convId);
+    if (!conv) {
+      sendJson(res, 404, { error: "Conversation not found" });
+      return true;
+    }
+
+    const worker = readWorkerMeta(conv.workerId) || (state.workers || []).find((w) => w.id === conv.workerId);
+    const workerMarkdowns = worker ? readWorkerMarkdowns(loadWorkerDir(conv.workerId).qoderDir) : {};
+    const userMessage = {
+      id: `msg-${Date.now()}`,
+      role: "user",
+      content: body.content || "",
+      timestamp: new Date().toISOString(),
+    };
+    conv.messages.push(userMessage);
+    if (conv.messages.length === 1) {
+      conv.title = body.content.slice(0, 40) || "新对话";
+    }
+    conv.updatedAt = new Date().toISOString();
+    saveAgentosState(state);
+
+    // 设置 SSE 响应头
+    res.statusCode = 200;
+    res.setHeader("content-type", "text/event-stream; charset=utf-8");
+    res.setHeader("cache-control", "no-cache");
+    res.setHeader("connection", "keep-alive");
+    res.setHeader("access-control-allow-origin", "http://localhost:5174");
+    res.setHeader("access-control-allow-methods", "POST,OPTIONS");
+    res.setHeader("access-control-allow-headers", "content-type");
+
+    const sendEvent = (eventName, data) => {
+      res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const skillContext = (worker?.skills || []).length > 0
+      ? `\n你绑定的 Skill: ${(worker.skills || []).join(", ")}。请在合适时调用相关 Skill。`
+      : "";
+    const memoryItems = [
+      ...((worker?.memory || []).map((m) => `- ${m.key}: ${m.value}`)),
+      ...(workerMarkdowns.MEMORY ? [workerMarkdowns.MEMORY] : []),
+    ].filter(Boolean);
+    const memoryContext = memoryItems.length > 0
+      ? `\n你的记忆:\n${memoryItems.join("\n")}`
+      : "";
+    const systemPrompt = (worker?.rolePrompt || workerMarkdowns.IDENTITY || "你是一个AI助手。") + skillContext + memoryContext;
+
+    const messagesForPrompt = [
+      { role: "system", content: systemPrompt },
+      ...conv.messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    const assistantMessage = {
+      id: `msg-${Date.now() + 1}`,
+      role: "assistant",
+      content: "",
+      toolCalls: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const prompt = messagesForPrompt.map((m) => {
+        if (m.role === "system") return `[System] ${m.content}`;
+        if (m.role === "user") return `[User] ${m.content}`;
+        return m.content;
+      }).join("\n\n");
+
+      const runId = `run-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+      const startedAt = new Date().toISOString();
+      let tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+      const child = spawn("opencode", [
+        "run", "--format", "json",
+        "--attach", target.origin,
+        "--dir", root,
+        "--title", `AgentOS ${worker?.name || "chat"}`,
+        prompt,
+      ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+      let buffer = "";
+      child.stdout.on("data", (chunk) => {
+        buffer += chunk.toString("utf8");
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const event = JSON.parse(line);
+            if (event.type === "message" || event.type === "text") {
+              const text = event.content || event.text || "";
+              if (text) {
+                assistantMessage.content += text;
+                sendEvent("message_delta", { text });
+              }
+            } else if (event.type === "tool_use" || event.type === "tool_call") {
+              const toolCall = { name: event.name || event.tool || "", args: event.args || event.input || {} };
+              assistantMessage.toolCalls.push(toolCall);
+              sendEvent("tool_call", toolCall);
+            } else if (event.type === "tool_result") {
+              sendEvent("tool_result", { name: event.name || "", result: event.content || event.result || "" });
+            }
+            tokenUsage = mergeTokenUsage(tokenUsage, readTokenUsage(event));
+          } catch {}
+        }
+      });
+
+      child.stderr.on("data", (chunk) => {
+        const text = chunk.toString("utf8").trim();
+        if (text && !text.includes("<think>")) {
+          sendEvent("message_delta", { text: "" });
+        }
+      });
+
+      child.on("close", (code) => {
+        assistantMessage.timestamp = new Date().toISOString();
+        conv.messages.push(assistantMessage);
+        conv.updatedAt = new Date().toISOString();
+        saveAgentosState(state);
+        const estimated = !tokenUsage.totalTokens;
+        const finalUsage = estimated
+          ? {
+              inputTokens: estimateTokensFromText(prompt),
+              outputTokens: estimateTokensFromText(assistantMessage.content),
+              totalTokens: estimateTokensFromText(prompt) + estimateTokensFromText(assistantMessage.content),
+            }
+          : tokenUsage;
+        recordWorkerUsageEvent({
+          workerId: conv.workerId || "worker-default",
+          source: "chat",
+          sourceId: assistantMessage.id,
+          conversationId: conv.id,
+          title: conv.title || "新对话",
+          status: code === 0 ? "completed" : "failed",
+          model: worker?.model || "",
+          ...finalUsage,
+          estimated,
+          durationMs: new Date(assistantMessage.timestamp).getTime() - new Date(startedAt).getTime(),
+          startedAt,
+          finishedAt: assistantMessage.timestamp,
+        });
+        sendEvent("message_complete", { messageId: assistantMessage.id, exitCode: code });
+        res.end();
+      });
+
+      child.on("error", (error) => {
+        assistantMessage.content += `\n[执行错误: ${error.message}]`;
+        assistantMessage.timestamp = new Date().toISOString();
+        conv.messages.push(assistantMessage);
+        conv.updatedAt = new Date().toISOString();
+        saveAgentosState(state);
+        const inputTokens = estimateTokensFromText(prompt);
+        const outputTokens = estimateTokensFromText(assistantMessage.content);
+        recordWorkerUsageEvent({
+          workerId: conv.workerId || "worker-default",
+          source: "chat",
+          sourceId: assistantMessage.id,
+          conversationId: conv.id,
+          title: conv.title || "新对话",
+          status: "failed",
+          model: worker?.model || "",
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+          estimated: true,
+          durationMs: new Date(assistantMessage.timestamp).getTime() - new Date(startedAt).getTime(),
+          startedAt,
+          finishedAt: assistantMessage.timestamp,
+        });
+        sendEvent("message_complete", { messageId: assistantMessage.id, error: error.message });
+        res.end();
+      });
+    } catch (error) {
+      sendEvent("message_complete", { error: error.message });
+      res.end();
+    }
+
     return true;
   }
 

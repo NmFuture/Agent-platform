@@ -37,6 +37,7 @@ import {
   TerminalSquare,
   Upload,
   UserRound,
+  Users,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -47,15 +48,19 @@ import {
   knowledgeBases,
   runSteps,
 } from "./data/platformData";
+import { agencyAgentsHydrated } from "./data/agencyAgents";
 import {
   advanceDemoRun,
   backendContract,
   createDemoRun,
 } from "./api/futureTechSkillAdapter";
+import ChatView from "./components/chat/ChatView";
+import WorkerDashboard from "./components/workers/WorkerDashboard";
 
 const navItems = [
+  { id: "chat", label: "对话", icon: MessageSquare },
+  { id: "workers", label: "数字员工", icon: Users },
   { id: "dashboard", label: "仪表盘", icon: LayoutDashboard },
-  { id: "general", label: "通用 Agent", icon: Bot },
   { id: "marketplace", label: "Agent 市场", icon: Store },
   { id: "skills", label: "技能市场", icon: Puzzle },
   { id: "custom", label: "定制中心", icon: SlidersHorizontal },
@@ -75,6 +80,16 @@ const statusMap = {
 const defaultConsoleUrl = "http://localhost:5175/";
 
 const viewMeta = {
+  chat: {
+    eyebrow: "AI Chat",
+    title: "对话",
+    subtitle: "与数字员工对话，通过 Skill 完成任务。",
+  },
+  workers: {
+    eyebrow: "Digital Workers",
+    title: "数字员工",
+    subtitle: "配置数字员工的人设、Skill、记忆和模型。",
+  },
   dashboard: {
     eyebrow: "Enterprise AI v2.4",
     title: "仪表盘",
@@ -188,11 +203,12 @@ function defaultTaskForAgent(agent) {
 }
 
 function App() {
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("chat");
   const [selectedAgentId, setSelectedAgentId] = useState("contract-extraction");
   const [run, setRun] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [settingsTab, setSettingsTab] = useState("model");
+  const [chatWorkerId, setChatWorkerId] = useState("");
   const [consoleUrl, setConsoleUrl] = useState(defaultConsoleUrl);
   const [consoleFrameKey, setConsoleFrameKey] = useState(0);
   const [platformState, setPlatformState] = useState(null);
@@ -200,8 +216,8 @@ function App() {
   const [builderSeedSkillId, setBuilderSeedSkillId] = useState("contract-e2e-excel");
 
   const agents = useMemo(() => {
-    const loadedAgents = platformState?.agents?.length ? platformState.agents : seedAgents;
-    return loadedAgents.map(hydrateAgent);
+    const platformAgents = platformState?.agents?.length ? platformState.agents : seedAgents;
+    return [...platformAgents, ...agencyAgentsHydrated].map(hydrateAgent);
   }, [platformState]);
 
   const selectedAgent = useMemo(
@@ -430,6 +446,22 @@ function App() {
           </section>
         )}
 
+        {view === "chat" && (
+          <ChatView
+            initialWorkerId={chatWorkerId}
+            onWorkerChange={setChatWorkerId}
+          />
+        )}
+
+        {view === "workers" && (
+          <WorkerDashboard
+            onOpenChat={(workerId) => {
+              setChatWorkerId(workerId);
+              setView("chat");
+            }}
+          />
+        )}
+
         {view === "dashboard" && (
           <Dashboard
             agents={agents}
@@ -655,8 +687,8 @@ function GeneralAgent({ consoleUrl, frameKey }) {
 }
 
 function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, onCustomize }) {
-  const runnableAgents = agents.filter((agent) => agent.runnable !== false && agent.runner);
-  const selectedAgent = runnableAgents.find((agent) => agent.id === selectedAgentId) || runnableAgents[0];
+  const displayAgents = agents; // Show all agents including agency-agents imports
+  const selectedAgent = displayAgents.find((agent) => agent.id === selectedAgentId) || displayAgents[0];
   const [pdfFile, setPdfFile] = useState(null);
   const [message, setMessage] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -698,11 +730,11 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
         </div>
 
         <div className="agent-grid">
-          {runnableAgents.map((agent) => {
+          {displayAgents.map((agent, index) => {
             const Icon = agent.icon;
             return (
               <article
-                key={agent.id}
+                key={`${agent.id}-${index}`}
                 className={`agent-card ${selectedAgent?.id === agent.id ? "selected" : ""}`}
                 onClick={() => onSelectAgent(agent.id)}
               >
@@ -712,12 +744,12 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
                 <div className="agent-card-main">
                   <div className="agent-title-row">
                     <h3>{agent.name}</h3>
-                    <span className="status-pill">{agent.status}</span>
+                    <span className="status-pill">{agent.category || agent.status}</span>
                   </div>
                   <p>{agent.description}</p>
                 </div>
                 <div className="agent-card-footer">
-                  <span>{agent.owner}</span>
+                  <span>{agent.vibe || agent.owner || ""}</span>
                   <button
                     className="ghost-button compact-button"
                     type="button"
@@ -746,7 +778,7 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
           })}
         </div>
 
-        {runnableAgents.length === 0 && (
+        {displayAgents.length === 0 && (
           <div className="empty-state">
             <Bot size={22} />
             <strong>还没有可用 Agent</strong>
@@ -924,9 +956,9 @@ function SkillMarketplace({ onOpenCustom }) {
         )}
 
         <div className="skill-market-grid real-skill-grid">
-          {visibleSkills.map((skill) => {
+          {visibleSkills.map((skill, index) => {
             return (
-              <article className="skill-card" key={skill.id}>
+              <article className="skill-card" key={`${skill.id}-${index}`}>
                 <div className="skill-card-head">
                   <div className="agent-icon blue">
                     <Puzzle size={20} />
@@ -1289,11 +1321,11 @@ function CustomCenter({
       <aside className="right-rail">
         <PanelTitle icon={Store} title="已保存 Agent" />
         <div className="agent-switcher">
-          {agents.map((agent) => {
+          {agents.map((agent, index) => {
             const Icon = agent.icon;
             return (
               <button
-                key={agent.id}
+                key={`${agent.id}-${index}`}
                 className={selectedAgentId === agent.id ? "active" : ""}
                 type="button"
                 onClick={() => onSelectAgent(agent.id)}
