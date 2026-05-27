@@ -5,14 +5,14 @@ import {
 } from "lucide-react";
 
 const TABS = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "project", label: "Project", icon: FolderKanban },
-  { id: "task", label: "Task", icon: ListTodo },
-  { id: "triggers", label: "Triggers", icon: Zap },
-  { id: "memory", label: "Memory", icon: Brain },
-  { id: "skill", label: "Skill", icon: Puzzle },
-  { id: "connector", label: "Connector", icon: Link2 },
-  { id: "permissions", label: "Permissions", icon: Shield },
+  { id: "home", label: "主页", icon: Home },
+  { id: "project", label: "项目", icon: FolderKanban },
+  { id: "task", label: "任务", icon: ListTodo },
+  { id: "triggers", label: "自动化", icon: Zap },
+  { id: "memory", label: "记忆", icon: Brain },
+  { id: "skill", label: "技能", icon: Puzzle },
+  { id: "connector", label: "连接器", icon: Link2 },
+  { id: "permissions", label: "权限", icon: Shield },
 ];
 
 export default function WorkerHome({ workerId, onBack, onOpenChat }) {
@@ -164,29 +164,29 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "home" && (
           <div className="worker-section-grid">
             <div className="worker-section-card">
-              <h3><FolderKanban size={16} /> Project</h3>
+              <h3><FolderKanban size={16} /> 项目</h3>
               <p>{projects.length} 个项目</p>
               <ul>{projects.slice(0, 3).map((p) => <li key={p.id}>{p.name}</li>)}</ul>
             </div>
             <div className="worker-section-card">
-              <h3><Zap size={16} /> Triggers</h3>
+              <h3><Zap size={16} /> 自动化</h3>
               <p>{triggers.length} 个触发器</p>
               <ul>{triggers.slice(0, 3).map((t) => <li key={t.id}>{t.name}</li>)}</ul>
             </div>
             <div className="worker-section-card">
-              <h3><ListTodo size={16} /> Tasks</h3>
+              <h3><ListTodo size={16} /> 任务</h3>
               <p>{tasks.length} 个任务</p>
             </div>
             <div className="worker-section-card">
-              <h3><Brain size={16} /> Memory</h3>
+              <h3><Brain size={16} /> 记忆</h3>
               <p>{(md.MEMORY || "").split("\n").filter(l => l.startsWith("- ")).length} 条记忆</p>
             </div>
             <div className="worker-section-card">
-              <h3><Puzzle size={16} /> Skills</h3>
+              <h3><Puzzle size={16} /> 技能</h3>
               <p>{(worker.availableSkills || []).length} 个可用技能</p>
             </div>
             <div className="worker-section-card">
-              <h3><Link2 size={16} /> Connectors</h3>
+              <h3><Link2 size={16} /> 连接器</h3>
               <p>{connectors.length} 个连接器</p>
             </div>
 
@@ -214,7 +214,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "project" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Projects</h3>
+              <h3>项目</h3>
               <button className="primary-button compact" onClick={createProject}>
                 <Plus size={14} /> 新建项目
               </button>
@@ -236,7 +236,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "task" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Tasks</h3>
+              <h3>任务</h3>
             </div>
             {tasks.length === 0 && <div className="worker-empty">暂无任务</div>}
             {tasks.map((t) => (
@@ -255,7 +255,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "triggers" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Triggers</h3>
+              <h3>自动化</h3>
               <button className="primary-button compact" onClick={createTrigger}>
                 <Plus size={14} /> 新建触发器
               </button>
@@ -280,7 +280,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "memory" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Memory</h3>
+              <h3>记忆</h3>
               <button className="ghost-button compact" onClick={() => loadMarkdown("MEMORY.md")}>
                 <Edit3 size={14} /> 编辑
               </button>
@@ -298,7 +298,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "skill" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Skills</h3>
+              <h3>技能</h3>
             </div>
             {(worker.availableSkills || []).length === 0 && <div className="worker-empty">暂无可用技能</div>}
             {(worker.availableSkills || []).map((s) => (
@@ -317,7 +317,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "connector" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Connectors</h3>
+              <h3>连接器</h3>
               <button className="primary-button compact" onClick={createConnector}>
                 <Plus size={14} /> 新建连接器
               </button>
@@ -342,7 +342,7 @@ export default function WorkerHome({ workerId, onBack, onOpenChat }) {
         {activeTab === "permissions" && (
           <div className="worker-list-view">
             <div className="worker-list-header">
-              <h3>Permissions</h3>
+              <h3>权限</h3>
             </div>
             <div className="permissions-grid">
               <div className="permission-item">

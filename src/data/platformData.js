@@ -31,10 +31,10 @@ export const runSteps = [
   },
   {
     key: "extract",
-    title: "执行 Skill",
-    detail: "调用合同提取 Skill，完成字段、付款、违约、风险和资料交付要求抽取。",
+    title: "执行技能",
+    detail: "调用合同提取技能，完成字段、付款、违约、风险和资料交付要求抽取。",
     tool: "contract-e2e-excel",
-    source: "FutureTech Skill",
+    source: "FutureTech 技能",
   },
   {
     key: "validate",
@@ -53,8 +53,8 @@ export const runSteps = [
 ];
 
 export const knowledgeBases = [
-  { name: "合同提取规则包", count: "248", freshness: "内置 Skill", type: "字段规则" },
-  { name: "Excel 输出模板", count: "5 sheets", freshness: "内置 Skill", type: "交付模板" },
+  { name: "合同提取规则包", count: "248", freshness: "内置技能", type: "字段规则" },
+  { name: "Excel 输出模板", count: "5 sheets", freshness: "内置技能", type: "交付模板" },
   { name: "运行产物目录", count: ".runtime", freshness: "实时写入", type: "审计记录" },
 ];
 
@@ -66,6 +66,6 @@ export const customizationTemplates = [];
 
 export const auditEvents = [
   { time: "当前", user: "operator", action: "启动合同提取智能体", target: "合同 PDF -> Excel" },
-  { time: "当前", user: "平台", action: "调用 Skill", target: "contract-e2e-excel" },
+  { time: "当前", user: "平台", action: "调用技能", target: "contract-e2e-excel" },
   { time: "当前", user: "平台", action: "生成结果文件", target: "五类合同抽取 Excel" },
 ];

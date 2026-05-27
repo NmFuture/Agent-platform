@@ -47,7 +47,7 @@ const tabs = [
   { id: "tasks", label: "任务", icon: ListTodo },
   { id: "automations", label: "自动化", icon: Zap },
   { id: "memory", label: "记忆", icon: Brain },
-  { id: "skills", label: "Skill", icon: Puzzle },
+  { id: "skills", label: "技能", icon: Puzzle },
   { id: "connectors", label: "连接器", icon: Link2 },
   { id: "permissions", label: "权限", icon: Shield },
 ];
@@ -116,7 +116,7 @@ function growthTypeText(type) {
     created: "创建",
     profile: "档案",
     memory: "记忆",
-    skill: "Skill",
+    skill: "技能",
     connector: "连接器",
     permission: "权限",
     project: "项目",
@@ -236,7 +236,7 @@ function ProfileCompleteness({ profileCompleteness = {}, onEdit, onBindSkill }) 
         </button>
         <button className="text-button" type="button" onClick={onBindSkill}>
           <Puzzle size={14} />
-          绑定 Skill
+          绑定技能
         </button>
       </div>
     </div>
@@ -271,7 +271,7 @@ function BusinessSummaryStrip({ overview, cost }) {
 function WorkRecordSummary({ activity = {} }) {
   const summary = activity.summary || {};
   const stats = [
-    { label: "Awake Days", value: `${formatNumber(activity.awakeDays || 0)} d`, icon: CalendarDays },
+    { label: "活跃天数", value: `${formatNumber(activity.awakeDays || 0)} 天`, icon: CalendarDays },
     { label: "自动化", value: formatNumber(summary.automations || 0), icon: Zap },
     { label: "任务", value: formatNumber(summary.tasks || 0), icon: ListTodo },
     { label: "项目", value: formatNumber(summary.projects || 0), icon: FolderKanban },
@@ -348,7 +348,7 @@ function MemoryGrowthPanel({ overview, onEditProfile, onOpenMemory, onBindSkill 
     <section className="employee-panel memory-growth-panel">
       <div className="employee-panel-head">
         <div>
-          <span>Memory & Growth</span>
+          <span>记忆与成长</span>
           <strong>记忆与成长</strong>
         </div>
         <button className="text-button" type="button" onClick={onOpenMemory}>
@@ -365,7 +365,7 @@ function MemoryGrowthPanel({ overview, onEditProfile, onOpenMemory, onBindSkill 
           {recent.length === 0 ? (
             <div className="growth-empty">
               <strong>还没有成长动态</strong>
-              <span>编辑档案、补充记忆或绑定 Skill 后会出现第一条动态。</span>
+              <span>编辑档案、补充记忆或绑定技能后会出现第一条动态。</span>
               <button className="text-button" type="button" onClick={onEditProfile}>编辑档案</button>
             </div>
           ) : (
@@ -379,8 +379,8 @@ function MemoryGrowthPanel({ overview, onEditProfile, onOpenMemory, onBindSkill 
           </div>
           {learned.length === 0 ? (
             <div className="growth-empty compact">
-              <span>补充能力、记忆或 Skill 后会形成学习摘要。</span>
-              <button className="text-button" type="button" onClick={onBindSkill}>绑定 Skill</button>
+              <span>补充能力、记忆或技能后会形成学习摘要。</span>
+              <button className="text-button" type="button" onClick={onBindSkill}>绑定技能</button>
             </div>
           ) : (
             learned.map((item, index) => (
@@ -511,7 +511,7 @@ export default function WorkerDashboard({ onOpenChat }) {
     setProfileDraft({
       ...emptyWorkerDraft(),
       employeeType: "待配置",
-      description: "准备配置身份、Skill、记忆和工作规则。",
+      description: "准备配置身份、技能、记忆和工作规则。",
     });
     setProfileError("");
   };
@@ -697,7 +697,7 @@ export default function WorkerDashboard({ onOpenChat }) {
                     </button>
                     <button className="ghost-button" type="button" onClick={() => setActiveTab("skills")}>
                       <Puzzle size={16} />
-                      绑定 Skill
+                      绑定技能
                     </button>
                   </div>
                 </div>
@@ -742,7 +742,7 @@ export default function WorkerDashboard({ onOpenChat }) {
             <section className="employee-panel work-ledger-panel">
               <div className="employee-panel-head">
                 <div>
-                  <span>Work Record</span>
+                  <span>工作记录</span>
                   <strong>工作履历</strong>
                 </div>
                 <div className="range-toggle" aria-label="工作记录视图">
@@ -754,7 +754,7 @@ export default function WorkerDashboard({ onOpenChat }) {
               <ActivityHeatmap days={activity.heatmapDays || []} />
               <div className="work-record-detail-head">
                 <strong>{recordView === "timeline" ? "最近工作时间线" : "任务状态分组"}</strong>
-                <span>完成对话、绑定 Skill、创建任务后会产生更完整的工作记录。</span>
+                <span>完成对话、绑定技能、创建任务后会产生更完整的工作记录。</span>
               </div>
               <WorkRecord
                 view={recordView}
@@ -867,7 +867,7 @@ function ResourcePanel({ overview, activeTab }) {
         <ResourceStat icon={Zap} label="自动化" value={overview.metrics.automationCount} />
         <ResourceStat icon={MessageSquare} label="会话" value={overview.metrics.conversationCount} />
         <ResourceStat icon={Brain} label="记忆" value={overview.memory.count} />
-        <ResourceStat icon={Puzzle} label="绑定 Skill" value={overview.skills.count} />
+        <ResourceStat icon={Puzzle} label="绑定技能" value={overview.skills.count} />
         <ResourceStat icon={Link2} label="连接器" value={resources.connectors?.length || 0} />
       </div>
     );
@@ -892,7 +892,7 @@ function ResourcePanel({ overview, activeTab }) {
   }
 
   if (activeTab === "skills") {
-    return <SimpleRows items={overview.skills.bound || []} empty="暂未绑定 Skill" getTitle={(item) => item} getMeta={() => "已绑定"} />;
+    return <SimpleRows items={overview.skills.bound || []} empty="暂未绑定技能" getTitle={(item) => item} getMeta={() => "已绑定"} />;
   }
 
   if (activeTab === "connectors") {

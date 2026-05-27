@@ -107,10 +107,10 @@ export default function WorkerEditor({ worker, skills, onSave, onClose }) {
           </label>
 
           <div className="field-label wide">
-            绑定 Skill
+            绑定技能
             <div className="skill-checkbox-list">
               {skills.length === 0 && (
-                <div className="skill-empty">暂无可用 Skill</div>
+                <div className="skill-empty">暂无可用技能</div>
               )}
               {skills.map((skill) => (
                 <label key={skill.id} className="skill-checkbox">

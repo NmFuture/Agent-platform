@@ -86,7 +86,7 @@ export default function ChatView({ initialWorkerId = "", onWorkerChange }) {
     setProfileDraft({
       ...emptyWorkerDraft(),
       employeeType: "待配置",
-      description: "准备配置身份、Skill、记忆和工作规则。",
+      description: "准备配置身份、技能、记忆和工作规则。",
     });
     setProfileError("");
   };

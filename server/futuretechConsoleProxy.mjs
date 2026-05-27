@@ -165,15 +165,15 @@ const defaultSecurityPolicy = {
   rules: [
     {
       id: "runtime-full-console",
-      scope: "FutureTech Console",
+      scope: "FutureTech 控制台",
       decision: "完整保留",
-      detail: "Console 入口保留文件、会话、终端、Skill、MCP、事件流和项目上下文能力。",
+      detail: "控制台入口保留文件、会话、终端、技能、MCP、事件流和项目上下文能力。",
     },
     {
       id: "agent-skill-allowlist",
-      scope: "业务 Agent",
-      decision: "按 Agent 白名单调用",
-      detail: "业务 Agent 只能默认使用自身绑定的 Skill，临时追加 Skill 要写入运行记录。",
+      scope: "业务智能体",
+      decision: "按智能体白名单调用",
+      detail: "业务智能体只能默认使用自身绑定的技能，临时追加技能要写入运行记录。",
     },
     {
       id: "human-gates",
@@ -185,7 +185,7 @@ const defaultSecurityPolicy = {
       id: "brand-boundary",
       scope: "对外展示",
       decision: "AgentOS 外壳品牌隔离",
-      detail: "AgentOS 外壳只展示 FutureTech 体系；完整 Console 透明嵌入，不改写 Runtime 客户端协议。",
+      detail: "AgentOS 外壳只展示 FutureTech 体系；完整控制台透明嵌入，不改写 Runtime 客户端协议。",
     },
   ],
 };
@@ -331,7 +331,7 @@ function formatDate(date) {
 
 function labelSkillRoot(skillRoot) {
   if (skillRoot === bundledSkillRoot) {
-    return "内置 Skill";
+    return "内置技能";
   }
 
   if (skillRoot.startsWith(homedir())) {
@@ -455,7 +455,7 @@ function parseSkillFile(skillPath, id, skillRoot) {
     name: compactMarkdown(frontmatter.name || headingName || id),
     description:
       compactMarkdown(frontmatter.description || overview || extractFirstParagraph(content)) ||
-      "FutureTech Skill。",
+      "FutureTech 技能。",
     version,
     status: "可用",
     source: "FutureTech",
@@ -473,11 +473,11 @@ function skillRootFromLocation(location = "") {
 }
 
 function sourceNameFromRoot(skillRoot = "") {
-  if (skillRoot === bundledSkillRoot) return "FutureTech Skills";
-  if (skillRoot.includes("/.agents/skills")) return "Agents Skills";
-  if (skillRoot.includes("/.claude/skills")) return "Claude Skills";
-  if (skillRoot.includes("/.opencode/skills")) return "FutureTech Skills";
-  return "Skill Path";
+  if (skillRoot === bundledSkillRoot) return "FutureTech 技能";
+  if (skillRoot.includes("/.agents/skills")) return "智能体技能";
+  if (skillRoot.includes("/.claude/skills")) return "Claude 技能";
+  if (skillRoot.includes("/.opencode/skills")) return "FutureTech 技能";
+  return "技能路径";
 }
 
 function parseVersion(content = "") {
@@ -509,7 +509,7 @@ function buildRuntimeSkill(item) {
     name: compactMarkdown(item.name || id),
     description:
       compactMarkdown(item.description || extractFirstParagraph(item.content || "")) ||
-      "FutureTech Runtime 已加载的 Skill。",
+      "FutureTech Runtime 已加载的技能。",
     version: parseVersion(item.content || ""),
     status: "已加载",
     source: sourceNameFromRoot(skillRoot),
@@ -542,7 +542,7 @@ function listLocalOpencodeSkillFiles() {
           return {
             id: entry.name,
             name: entry.name,
-            description: "Skill 配置读取失败，请检查 SKILL.md。",
+            description: "技能配置读取失败，请检查 SKILL.md。",
             version: "未知",
             status: "需检查",
             source: "FutureTech",
@@ -866,15 +866,15 @@ function buildAgentBlueprintFromSkill(skill) {
   const id = `agent-${slugifyId(skill?.id || skill?.name || "custom")}`;
   return normalizeAgent({
     id,
-    name: `${skill?.name || skill?.id || "自定义"} Agent`,
+    name: `${skill?.name || skill?.id || "自定义"}智能体`,
     shortName: "自定",
     owner: "业务部门",
     status: "草稿",
     category: skill?.category || "自定义",
     marketplace: false,
-    description: `围绕 ${skill?.name || skill?.id || "选定 Skill"} 封装的业务 Agent。`,
-    businessGoal: skill?.description || "调用绑定 Skill 完成业务任务。",
-    rolePrompt: `你是一个围绕「${skill?.name || skill?.id || "选定 Skill"}」工作的业务 Agent。先确认输入，再调用绑定 Skill，最后交付可追踪的结果和产物路径。`,
+    description: `围绕 ${skill?.name || skill?.id || "选定技能"} 封装的业务智能体。`,
+    businessGoal: skill?.description || "调用绑定技能完成业务任务。",
+    rolePrompt: `你是一个围绕「${skill?.name || skill?.id || "选定技能"}」工作的业务智能体。先确认输入，再调用绑定技能，最后交付可追踪的结果和产物路径。`,
     skills: [skill?.id || "custom-skill"].filter(Boolean),
     knowledgeBases: [],
     permissions: {
@@ -936,7 +936,7 @@ function makeDefaultAgentosState() {
         time: new Date().toISOString(),
         user: "system",
         action: "初始化 AgentOS 状态",
-        target: "Agent / Skill / Security registry",
+        target: "智能体 / 技能 / 安全注册表",
       },
     ],
     securityPolicy: defaultSecurityPolicy,
@@ -1137,7 +1137,7 @@ function recordAgentRunUsage(runId, agent, status) {
     workerId: run.workerId || "worker-default",
     source: "agent-run",
     sourceId: run.id,
-    title: run.agentName || agent?.name || "Agent Run",
+    title: run.agentName || agent?.name || "智能体运行",
     status,
     model: run.model || agent?.model || "",
     ...usage,
@@ -1244,14 +1244,14 @@ function buildAgentPrompt(agent, body) {
     `你正在 FutureTech AgentOS 中以「${agent.name}」身份执行任务。`,
     "",
     `身份与职责：${agent.rolePrompt || agent.description}`,
-    `绑定 Skill：${selectedSkills.join(", ") || "未配置"}`,
+    `绑定技能：${selectedSkills.join(", ") || "未配置"}`,
     `知识范围：${(agent.knowledgeBases || []).join(", ") || "未配置"}`,
     `权限策略：${JSON.stringify(agent.permissions || {}, null, 2)}`,
     `输出要求：${agent.outputPolicy || "输出执行摘要、过程证据和后续建议。"}`,
     "",
     "执行约束：",
     "1. 只在当前项目目录内工作，除非用户明确要求跨目录。",
-    "2. 需要使用 Skill 时优先调用绑定 Skill；缺少输入时先说明缺口。",
+    "2. 需要使用技能时优先调用绑定技能；缺少输入时先说明缺口。",
     "3. 不要暴露底层实现品牌，对外统一称为 FutureTech Runtime。",
     "4. 对可能产生业务承诺或修改文件的动作，先给出人工确认点。",
     "",
@@ -1263,15 +1263,15 @@ function createRunSteps(agent = {}) {
   if (agent.runner?.type === "skill-script") {
     return [
       { key: "input", title: "读取输入", state: "running", detail: "读取 PDF 输入并写入任务工作区。" },
-      { key: "skill", title: "执行 Skill", state: "pending", detail: "调用绑定 Skill 完成合同抽取。" },
+      { key: "skill", title: "执行技能", state: "pending", detail: "调用绑定技能完成合同抽取。" },
       { key: "validate", title: "校验输出", state: "pending", detail: "校验 Excel、摘要和 5 个业务 sheet。" },
       { key: "artifact", title: "交付产物", state: "pending", detail: "记录 Excel、摘要和运行日志路径。" },
     ];
   }
   return [
-    { key: "queued", title: "创建任务", state: "done", detail: "AgentOS 已写入任务、身份、Skill 和权限上下文。" },
-    { key: "runtime", title: "FutureTech Runtime 执行", state: "running", detail: "通过完整 Runtime 能力执行会话、工具、Skill 和上下文任务。" },
-    { key: "skill", title: "Skill 编排", state: "pending", detail: "按 Agent 绑定的 Skill 白名单组织执行。" },
+    { key: "queued", title: "创建任务", state: "done", detail: "AgentOS 已写入任务、身份、技能和权限上下文。" },
+    { key: "runtime", title: "FutureTech Runtime 执行", state: "running", detail: "通过完整 Runtime 能力执行会话、工具、技能和上下文任务。" },
+    { key: "skill", title: "技能编排", state: "pending", detail: "按智能体绑定的技能白名单组织执行。" },
     { key: "artifact", title: "产物与审计", state: "pending", detail: "记录日志、结果、产物路径和审计事件。" },
   ];
 }
@@ -1281,7 +1281,7 @@ function finishRunSteps(status, agent = {}) {
     const done = status === "completed" ? "done" : "pending";
     return [
       { key: "input", title: "读取输入", state: status === "failed" ? "pending" : "done", detail: "PDF 输入已写入任务工作区。" },
-      { key: "skill", title: "执行 Skill", state: status === "failed" ? "pending" : "done", detail: "绑定 Skill 执行已结束。" },
+      { key: "skill", title: "执行技能", state: status === "failed" ? "pending" : "done", detail: "绑定技能执行已结束。" },
       { key: "validate", title: "校验输出", state: done, detail: "Excel 和摘要校验已完成。" },
       { key: "artifact", title: "交付产物", state: done, detail: "结果产物和审计日志已落盘。" },
     ];
@@ -1290,7 +1290,7 @@ function finishRunSteps(status, agent = {}) {
   return [
     { key: "queued", title: "创建任务", state: "done", detail: "任务已创建。" },
     { key: "runtime", title: "FutureTech Runtime 执行", state: status === "failed" ? "pending" : "done", detail: "Runtime 执行已结束。" },
-    { key: "skill", title: "Skill 编排", state: finalState, detail: "Skill 调用与过程事件已记录。" },
+    { key: "skill", title: "技能编排", state: finalState, detail: "技能调用与过程事件已记录。" },
     { key: "artifact", title: "产物与审计", state: finalState, detail: "运行日志和审计事件已落盘。" },
   ];
 }
@@ -1641,7 +1641,7 @@ async function buildRuntimeStatus() {
     version: health?.version || "",
     services: [
       { id: "runtime", name: "FutureTech Runtime", port: runtimePort, healthy: Boolean(health?.healthy), pids: runtimePids },
-      { id: "proxy", name: "FutureTech Console Proxy", port, healthy: proxyPids.length > 0, pids: proxyPids },
+      { id: "proxy", name: "FutureTech 控制台代理", port, healthy: proxyPids.length > 0, pids: proxyPids },
       { id: "web", name: "AgentOS Web", port: 5174, healthy: webPids.length > 0, pids: webPids },
     ],
     model: activeProfile?.displayModelName || rewriteFutureTechText(modelState.activeModel),
@@ -1653,7 +1653,7 @@ async function buildRuntimeStatus() {
       "文件",
       "事件流",
       "终端",
-      "Skill",
+      "技能",
       "MCP",
       "项目上下文",
       "模型网关",
@@ -1930,7 +1930,7 @@ async function handleAdmin(req, res) {
     if (existingIndex >= 0) state.agents[existingIndex] = agent;
     else state.agents = [agent, ...state.agents];
     saveAgentosState(state);
-    recordAudit("保存 Agent 身份", agent.name, "operator");
+    recordAudit("保存智能体身份", agent.name, "operator");
     sendJson(res, 200, { agent, agents: state.agents });
     return true;
   }
@@ -1940,7 +1940,7 @@ async function handleAdmin(req, res) {
     const catalog = await listOpencodeSkills();
     const skill = catalog.skills.find((item) => item.id === body.skillId) || catalog.skills[0];
     if (!skill) {
-      sendJson(res, 404, { error: "Skill not found" });
+      sendJson(res, 404, { error: "技能不存在" });
       return true;
     }
     sendJson(res, 200, { agent: buildAgentBlueprintFromSkill(skill), skill });
@@ -1957,7 +1957,7 @@ async function handleAdmin(req, res) {
       const body = await readRequestJson(req);
       sendJson(res, 202, { run: createAgentRun(body) });
     } catch (error) {
-      sendJson(res, 500, { error: "Failed to start Agent run", detail: error.message });
+      sendJson(res, 500, { error: "启动智能体运行失败", detail: error.message });
     }
     return true;
   }
@@ -1966,7 +1966,7 @@ async function handleAdmin(req, res) {
   if (runMatch && req.method === "GET") {
     const run = loadAgentosState().runs.find((item) => item.id === runMatch[1]);
     if (!run) {
-      sendJson(res, 404, { error: "Run not found" });
+      sendJson(res, 404, { error: "运行记录不存在" });
       return true;
     }
     sendJson(res, 200, { run: compactRun(run) });
@@ -2006,7 +2006,7 @@ async function handleAdmin(req, res) {
 
       if (!profile.available) {
         sendJson(res, 400, {
-          error: "Model provider is not connected",
+          error: "模型服务商未连接",
           modelName: profile.modelName,
         });
         return true;
@@ -2103,7 +2103,7 @@ async function handleAdmin(req, res) {
     writeWorkerMarkdown(qoderDir, "IDENTITY.md", "# Identity — 通用助手\n\n你是宁梦未来的通用 AI 助手。你可以帮助用户完成各类任务，包括文档处理、数据分析、代码编写等。请用中文回复。\n\n## 能力边界\n\n| 能做 | 不做 |\n|------|------|\n| 文档处理、数据分析、代码编写、问题解答 | 越权操作、破坏性命令 |\n");
     writeWorkerMarkdown(qoderDir, "PERSONA.md", "# Persona — 通用助手\n\n## 性格特征\n\n- 友好耐心\n- 逻辑清晰\n- 注重细节\n");
     writeWorkerMarkdown(qoderDir, "TOOLS.md", "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件内容\n- **Write**: 创建或覆盖文件\n- **Edit**: 修改文件部分内容\n- **Bash**: 执行 shell 命令\n");
-    writeWorkerMarkdown(qoderDir, "MEMORY.md", "# Memory Index\n\n## User Preferences\n\n## Working Rules\n\n## Feedback History\n");
+    writeWorkerMarkdown(qoderDir, "MEMORY.md", "# 记忆索引\n\n## 用户偏好\n\n## 工作规则\n\n## 反馈记录\n");
     writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", '[{"name":"代码先行","description":"小改动直接做，大改动先简述思路再实现"}]');
     writeWorkerMarkdown(qoderDir, "BIBLE.md", "");
     writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", "");
@@ -2211,7 +2211,7 @@ async function handleAdmin(req, res) {
       { key: "description", label: "员工简介", complete: Boolean(meta.description) },
       { key: "capabilities", label: "核心能力", complete: parseMarkdownSummary(markdowns.CORE_CAPABILITIES).length > 0 },
       { key: "memory", label: "长期记忆", complete: countMemory(markdowns, meta) > 0 },
-      { key: "skills", label: "绑定 Skill", complete: (skills || []).length > 0 },
+      { key: "skills", label: "绑定技能", complete: (skills || []).length > 0 },
       { key: "connectors", label: "连接器", complete: (connectors || []).length > 0 },
     ];
     const completed = checks.filter((item) => item.complete).length;
@@ -2278,7 +2278,7 @@ async function handleAdmin(req, res) {
       created: "员工创建",
       profile: "档案更新",
       memory: "记忆更新",
-      skill: "Skill 更新",
+      skill: "技能更新",
       connector: "连接器变化",
       permission: "权限变化",
       project: "项目更新",
@@ -2327,7 +2327,7 @@ async function handleAdmin(req, res) {
     const learned = [
       ...profileSummary.capabilities.map((item) => ({ title: "核心能力", detail: item })),
       ...profileSummary.workStyles.map((item) => ({ title: "工作风格", detail: item })),
-      ...(meta.skills || []).map((item) => ({ title: "已绑定 Skill", detail: item })),
+      ...(meta.skills || []).map((item) => ({ title: "已绑定技能", detail: item })),
       ...String(markdowns.MEMORY || "").split(/\r?\n/).filter((line) => line.trim()).slice(0, 3).map((line) => ({ title: "记忆沉淀", detail: line.replace(/^#+\s+/, "").replace(/^[-*]\s+/, "") })),
     ].filter((item, index, list) => item.detail && list.findIndex((candidate) => candidate.detail === item.detail) === index).slice(0, 5);
 
@@ -2466,7 +2466,7 @@ async function handleAdmin(req, res) {
       id: run.id,
       source: "agent-run",
       sourceId: run.id,
-      title: run.agentName || "Agent Run",
+      title: run.agentName || "智能体运行",
       status: run.status,
       model: run.model || "",
       inputTokens: collectRunTokenUsage(run).inputTokens,
@@ -2492,11 +2492,11 @@ async function handleAdmin(req, res) {
     const weekCost = sum(weekEvents.map((event) => ({ cost: costForEvent(event).amount })), "cost");
     const timeline = recentWork.map((item) => ({ ...item, cost: numberOrZero(item.cost), rateConfigured: Boolean(item.rateConfigured) }));
     const profileSummary = {
-      capabilities: parseMarkdownSummary(markdowns.CORE_CAPABILITIES, parseMarkdownSummary(markdowns.IDENTITY, ["处理对话任务", "调用绑定 Skill", "沉淀长期记忆"])),
+      capabilities: parseMarkdownSummary(markdowns.CORE_CAPABILITIES, parseMarkdownSummary(markdowns.IDENTITY, ["处理对话任务", "调用绑定技能", "沉淀长期记忆"])),
       workStyles: parseWorkStyles(markdowns.WORK_STYLES).length ? parseWorkStyles(markdowns.WORK_STYLES) : ["先确认目标，再执行任务", "结果优先，必要时提示风险"],
       riskLabels: [
         meta.permissions ? "权限已配置" : "默认权限",
-        (meta.skills || []).length ? "Skill 已绑定" : "待绑定 Skill",
+        (meta.skills || []).length ? "技能已绑定" : "待绑定技能",
         connectors.length ? "连接器已接入" : "未接入连接器",
       ],
       emptyHints: {
@@ -2599,7 +2599,7 @@ async function handleAdmin(req, res) {
     writeWorkerMarkdown(qoderDir, "IDENTITY.md", body.identity || `# Identity — ${meta.name}\n\n${meta.description}\n`);
     writeWorkerMarkdown(qoderDir, "PERSONA.md", body.persona || `# Persona — ${meta.name}\n\n## Character Traits\n\n- Helpful and precise\n`);
     writeWorkerMarkdown(qoderDir, "TOOLS.md", body.tools || "# 工具使用说明\n\n## 可用工具\n\n- **Read**: 读取文件\n- **Write**: 写入文件\n- **Bash**: 执行命令\n");
-    writeWorkerMarkdown(qoderDir, "MEMORY.md", body.memoryMd || "# Memory Index\n\n## User Preferences\n\n## Working Rules\n\n## Feedback History\n");
+    writeWorkerMarkdown(qoderDir, "MEMORY.md", body.memoryMd || "# 记忆索引\n\n## 用户偏好\n\n## 工作规则\n\n## 反馈记录\n");
     writeWorkerMarkdown(qoderDir, "WORK_STYLES.md", body.workStyles || "[]");
     writeWorkerMarkdown(qoderDir, "BIBLE.md", body.bible || "");
     writeWorkerMarkdown(qoderDir, "CORE_CAPABILITIES.md", body.coreCapabilities || "");
@@ -2631,14 +2631,14 @@ async function handleAdmin(req, res) {
     const meta = readWorkerMeta(workerId);
 
     if (!meta) {
-      sendJson(res, 404, { error: "Worker not found" });
+      sendJson(res, 404, { error: "数字员工不存在" });
       return true;
     }
 
     if (subPath === "/overview" && req.method === "GET") {
       const overview = buildWorkerOverview(workerId, url.searchParams.get("range") || "7d");
       if (!overview) {
-        sendJson(res, 404, { error: "Worker not found" });
+        sendJson(res, 404, { error: "数字员工不存在" });
         return true;
       }
       sendJson(res, 200, overview);
@@ -2674,8 +2674,8 @@ async function handleAdmin(req, res) {
         recordWorkerGrowthEvent({
           workerId,
           type: "skill",
-          title: "Skill 更新",
-          detail: (updated.skills || []).length ? `已绑定 ${(updated.skills || []).length} 个 Skill。` : "已清空绑定 Skill。",
+          title: "技能更新",
+          detail: (updated.skills || []).length ? `已绑定 ${(updated.skills || []).length} 个技能。` : "已清空绑定技能。",
           sourceId: `${workerId}-skills-${updated.updatedAt}`,
           occurredAt: updated.updatedAt,
         });
@@ -2823,7 +2823,7 @@ async function handleAdmin(req, res) {
       const trigId = trigMatch[1];
       const state = loadAgentosState();
       const trigger = (state.triggers || []).find((t) => t.id === trigId);
-      if (!trigger) { sendJson(res, 404, { error: "Trigger not found" }); return true; }
+      if (!trigger) { sendJson(res, 404, { error: "自动化不存在" }); return true; }
       if (req.method === "GET") { sendJson(res, 200, { trigger }); return true; }
       if (req.method === "PUT") {
         const body = await readRequestJson(req);
@@ -2901,7 +2901,7 @@ async function handleAdmin(req, res) {
       const connId = connMatch[1];
       const state = loadAgentosState();
       const connector = (state.connectors || []).find((c) => c.id === connId);
-      if (!connector) { sendJson(res, 404, { error: "Connector not found" }); return true; }
+      if (!connector) { sendJson(res, 404, { error: "连接器不存在" }); return true; }
       if (req.method === "PUT") {
         const body = await readRequestJson(req);
         Object.assign(connector, body, { id: connector.id, workerId: connector.workerId, updatedAt: new Date().toISOString() });
@@ -3027,7 +3027,7 @@ async function handleAdmin(req, res) {
     };
 
     const skillContext = (worker?.skills || []).length > 0
-      ? `\n你绑定的 Skill: ${(worker.skills || []).join(", ")}。请在合适时调用相关 Skill。`
+      ? `\n你绑定的技能: ${(worker.skills || []).join(", ")}。请在合适时调用相关技能。`
       : "";
     const memoryItems = [
       ...((worker?.memory || []).map((m) => `- ${m.key}: ${m.value}`)),
