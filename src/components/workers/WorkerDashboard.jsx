@@ -762,11 +762,15 @@ export default function WorkerDashboard({ onOpenChat }) {
                 </div>
 
                 <div className="employee-profile-meta-row">
-                  <div className="employee-chips">
-                    <span><UserRound size={13} />岗位 {activeWorker.role || activeWorker.employeeType || "数字员工"}</span>
-                    <span>模型 {activeWorker.model || "默认"}</span>
-                    <span>入职 {formatDate(activeWorker.createdAt)}</span>
-                    <span>最近活跃 {formatDate(activeOverview.metrics.lastActiveAt)}</span>
+                  <div className="employee-meta-cards">
+                    <div className="meta-card"><span><UserRound size={11} />岗位</span><strong>{activeWorker.role || activeWorker.employeeType || "数字员工"}</strong></div>
+                    <div className="meta-card"><span>模型</span><strong>{activeWorker.model || "默认"}</strong></div>
+                    <div className="meta-card"><span>入职</span><strong>{formatDate(activeWorker.createdAt)}</strong></div>
+                    <div className="meta-card"><span>最近活跃</span><strong>{formatDate(activeOverview.metrics.lastActiveAt)}</strong></div>
+                    <div className="meta-card"><span><Brain size={11} />记忆</span><strong>{activeOverview.memory.count}</strong></div>
+                    <div className="meta-card"><span><Puzzle size={11} />技能</span><strong>{activeOverview.skills.count}</strong></div>
+                    <div className="meta-card"><span><MessageSquare size={11} />会话</span><strong>{activeOverview.metrics.conversationCount || 0}</strong></div>
+                    <div className="meta-card"><span><ListTodo size={11} />任务</span><strong>{activeOverview.metrics.taskCount || 0}</strong></div>
                   </div>
                   <ProfileCompleteness
                     profileCompleteness={profileCompleteness}
