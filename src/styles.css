@@ -5278,7 +5278,8 @@ button {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 18px;
-  min-height: calc(100vh - 190px);
+  height: calc(100vh - 120px);
+  overflow: hidden;
 }
 
 .employee-directory,
@@ -5292,10 +5293,10 @@ button {
 }
 
 .employee-directory {
-  align-self: start;
-  position: sticky;
-  top: 86px;
+  align-self: stretch;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .employee-directory-head {
@@ -5347,11 +5348,12 @@ button {
 }
 
 .employee-directory-list {
-  max-height: calc(100vh - 300px);
-  overflow: auto;
+  flex: 1;
+  overflow-y: auto;
   padding: 0 10px 12px;
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .employee-directory-card {
@@ -5426,8 +5428,11 @@ button {
 
 .employee-main {
   min-width: 0;
+  overflow-y: auto;
   display: grid;
   gap: 14px;
+  align-content: start;
+  padding-bottom: 24px;
 }
 
 .employee-home-grid {
