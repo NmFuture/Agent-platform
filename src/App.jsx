@@ -54,11 +54,10 @@ import {
   backendContract,
   createDemoRun,
 } from "./api/futureTechSkillAdapter";
-import ChatView from "./components/chat/ChatView";
 import WorkerDashboard from "./components/workers/WorkerDashboard";
 
 const navItems = [
-  { id: "chat", label: "对话", icon: MessageSquare },
+  { id: "chat", label: "通用智能体", icon: Bot },
   { id: "workers", label: "数字员工", icon: Users },
   { id: "dashboard", label: "仪表盘", icon: LayoutDashboard },
   { id: "marketplace", label: "智能体市场", icon: Store },
@@ -81,9 +80,9 @@ const defaultConsoleUrl = "http://localhost:5175/";
 
 const viewMeta = {
   chat: {
-    eyebrow: "智能对话",
-    title: "对话",
-    subtitle: "与数字员工对话，通过技能完成任务。",
+    eyebrow: "Future Code",
+    title: "通用智能体",
+    subtitle: "嵌入完整 Future Code 工作台，保留会话、文件、终端、技能和事件能力。",
   },
   workers: {
     eyebrow: "数字员工",
@@ -320,7 +319,6 @@ function App() {
   const [run, setRun] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [settingsTab, setSettingsTab] = useState("model");
-  const [chatWorkerId, setChatWorkerId] = useState("");
   const [consoleUrl, setConsoleUrl] = useState(defaultConsoleUrl);
   const [consoleFrameKey, setConsoleFrameKey] = useState(0);
   const [platformState, setPlatformState] = useState(null);
@@ -360,7 +358,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (view === "general") {
+    if (view === "chat" || view === "general") {
       openNativeConsole();
     }
   }, [view]);
@@ -558,19 +556,16 @@ function App() {
           </section>
         )}
 
-        {view === "chat" && (
-          <ChatView
-            initialWorkerId={chatWorkerId}
-            onWorkerChange={setChatWorkerId}
+        {(view === "chat" || view === "general") && (
+          <GeneralAgent
+            consoleUrl={consoleUrl}
+            frameKey={consoleFrameKey}
           />
         )}
 
         {view === "workers" && (
           <WorkerDashboard
-            onOpenChat={(workerId) => {
-              setChatWorkerId(workerId);
-              setView("chat");
-            }}
+            onOpenChat={() => setView("chat")}
           />
         )}
 
@@ -579,19 +574,12 @@ function App() {
             agents={agents}
             platformState={platformState}
             onStartRun={startRun}
-            onOpenGeneral={() => setView("general")}
+            onOpenGeneral={() => setView("chat")}
             onOpenMarketplace={() => setView("marketplace")}
             onOpenSkills={() => setView("skills")}
             onOpenCustom={openCustomWithSkill}
           />
         )}
-
-        {view === "general" && (
-        <GeneralAgent
-          consoleUrl={consoleUrl}
-          frameKey={consoleFrameKey}
-        />
-      )}
 
         {view === "marketplace" && (
           <AgentMarketplace
@@ -616,7 +604,7 @@ function App() {
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
             onStartRun={startRun}
-            onOpenGeneral={() => setView("general")}
+            onOpenGeneral={() => setView("chat")}
             onPlatformRefresh={refreshPlatformState}
             seedSkillId={builderSeedSkillId}
           />
@@ -773,7 +761,7 @@ function GeneralAgent({ consoleUrl, frameKey }) {
         <div className="console-toolbar">
           <div>
             <span className="tiny-chip">通用会话</span>
-            <h2>FutureTech 通用智能体</h2>
+            <h2>Future Code 通用智能体</h2>
           </div>
           <div className="console-toolbar-actions">
             <a
@@ -789,7 +777,7 @@ function GeneralAgent({ consoleUrl, frameKey }) {
         </div>
         <iframe
           key={frameKey}
-          title="FutureTech Web 控制台"
+          title="Future Code 控制台"
           src={consoleUrl}
           className="console-frame"
         />
@@ -1165,6 +1153,10 @@ function CustomCenter({
   const [pdfFile, setPdfFile] = useState(null);
   const [runMessage, setRunMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const savedAgents = useMemo(() => {
+    const platformAgents = agents.filter((agent) => !agent.sourceFile);
+    return platformAgents.length ? platformAgents : agents.slice(0, 12);
+  }, [agents]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1324,7 +1316,7 @@ function CustomCenter({
   return (
     <section className="custom-layout">
       <div className="custom-main">
-        <div className="section-heading">
+        <div className="section-heading custom-heading">
           <div>
             <p className="eyebrow">智能体构建器</p>
             <h2>智能体定制中心</h2>
@@ -1433,7 +1425,7 @@ function CustomCenter({
       <aside className="right-rail">
         <PanelTitle icon={Store} title="已保存智能体" />
         <div className="agent-switcher">
-          {agents.map((agent, index) => {
+          {savedAgents.map((agent, index) => {
             const Icon = agent.icon;
             return (
               <button
@@ -2049,7 +2041,7 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
           <div className="contract-box">
             <PanelTitle icon={SlidersHorizontal} title="展示字段" />
             <SummaryLine label="平台名称" value="AgentOS" />
-            <SummaryLine label="通用入口" value="FutureTech 通用智能体" />
+            <SummaryLine label="通用入口" value="Future Code 通用智能体" />
             <SummaryLine label="服务形态" value="企业专属部署" />
           </div>
           <div className="kb-grid settings-wide">

@@ -199,17 +199,17 @@ function stripThinkBlocks(text) {
 
 function rewriteFutureTechText(text) {
   const branded = text
-    .replace(/\bopen\s*code\b/gi, "FutureTech")
-    .replace(/\bopencode\b/gi, "FutureTech")
-    .replace(/\bOpenCode\b/g, "FutureTech")
-    .replace(/\bopenCode\b/g, "FutureTech");
+    .replace(/\bopen\s*code\b/gi, "Future Code")
+    .replace(/\bopencode\b/gi, "Future Code")
+    .replace(/\bOpenCode\b/g, "Future Code")
+    .replace(/\bopenCode\b/g, "Future Code");
 
   const trimmed = branded.trim();
   const identityPatterns = [
-    /^我是\s*FutureTech(?:[，,。.\s]|$)/i,
+    /^我是\s*(?:FutureTech|Future Code)(?:[，,。.\s]|$)/i,
     /^我是\s*(?:MiniMax|GPT|OpenAI|Claude|AI\s*编程助手|AI助手|一个\s*AI)/i,
-    /^I am\s*(?:FutureTech|OpenCode|Open Code|MiniMax|GPT|OpenAI|Claude)/i,
-    /^I'm\s*(?:FutureTech|OpenCode|Open Code|MiniMax|GPT|OpenAI|Claude)/i,
+    /^I am\s*(?:FutureTech|Future Code|OpenCode|Open Code|MiniMax|GPT|OpenAI|Claude)/i,
+    /^I'm\s*(?:FutureTech|Future Code|OpenCode|Open Code|MiniMax|GPT|OpenAI|Claude)/i,
   ];
 
   if (
@@ -220,6 +220,21 @@ function rewriteFutureTechText(text) {
   }
 
   return branded;
+}
+
+function rewriteFutureCodeHtmlShell(html) {
+  return html
+    .replace(/<title>\s*OpenCode\s*<\/title>/i, "<title>Future Code</title>")
+    .replace(
+      /<noscript>You need to enable JavaScript to run this app\.<\/noscript>/i,
+      "<noscript>需要启用 JavaScript 才能运行 Future Code。</noscript>"
+    );
+}
+
+function rewriteFutureCodeAssetText(text) {
+  return text
+    .replace(/\bOpenCode\b/g, "Future Code")
+    .replace(/\bOpen Code\b/g, "Future Code");
 }
 
 function maskSecret(value = "") {
@@ -3431,13 +3446,43 @@ async function forward(req, res) {
       headers,
     },
     (upstreamRes) => {
+      const contentType = String(upstreamRes.headers["content-type"] || "");
+      const shouldRewriteHtmlShell = req.method === "GET" && contentType.includes("text/html");
+      const shouldRewriteBrandAsset = req.method === "GET" && contentType.includes("javascript");
+      const shouldRewriteBody = shouldRewriteHtmlShell || shouldRewriteBrandAsset;
+
       Object.entries(upstreamRes.headers).forEach(([key, value]) => {
-        if (key.toLowerCase() !== "content-security-policy") {
+        const lowerKey = key.toLowerCase();
+        if (
+          lowerKey !== "content-security-policy" &&
+          (!shouldRewriteBody || lowerKey !== "content-length")
+        ) {
           res.setHeader(key, value);
         }
       });
       res.statusCode = upstreamRes.statusCode || 200;
-      upstreamRes.pipe(res);
+
+      if (!shouldRewriteBody) {
+        upstreamRes.pipe(res);
+        return;
+      }
+
+      const chunks = [];
+      upstreamRes.on("data", (chunk) => chunks.push(chunk));
+      upstreamRes.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        res.end(
+          shouldRewriteHtmlShell
+            ? rewriteFutureCodeHtmlShell(body)
+            : rewriteFutureCodeAssetText(body)
+        );
+      });
+      upstreamRes.on("error", (error) => {
+        if (res.writableEnded) return;
+        res.statusCode = 502;
+        res.setHeader("content-type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ error: "FutureTech console proxy failed", detail: error.message }));
+      });
     }
   );
 
