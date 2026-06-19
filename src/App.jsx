@@ -37,6 +37,7 @@ import {
   TerminalSquare,
   Upload,
   UserRound,
+  Users,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -47,22 +48,25 @@ import {
   knowledgeBases,
   runSteps,
 } from "./data/platformData";
+import { agencyAgentsHydrated } from "./data/agencyAgents";
 import {
   advanceDemoRun,
   backendContract,
   createDemoRun,
 } from "./api/futureTechSkillAdapter";
+import WorkerDashboard from "./components/workers/WorkerDashboard";
 
 const navItems = [
+  { id: "chat", label: "通用智能体", icon: Bot },
+  { id: "workers", label: "数字员工", icon: Users },
   { id: "dashboard", label: "仪表盘", icon: LayoutDashboard },
-  { id: "general", label: "通用 Agent", icon: Bot },
-  { id: "marketplace", label: "Agent 市场", icon: Store },
+  { id: "marketplace", label: "智能体市场", icon: Store },
   { id: "skills", label: "技能市场", icon: Puzzle },
   { id: "custom", label: "定制中心", icon: SlidersHorizontal },
   { id: "settings", label: "设置", icon: Settings },
 ];
 
-const topNavItems = ["Agent 矩阵", "解决方案", "能力市场", "帮助中心"];
+const topNavItems = ["智能体矩阵", "解决方案", "能力市场", "帮助中心"];
 
 const promptSuggestions = ["生成销售周报", "合同风险识别", "客户交付复盘", "市场趋势分析"];
 
@@ -75,38 +79,48 @@ const statusMap = {
 const defaultConsoleUrl = "http://localhost:5175/";
 
 const viewMeta = {
+  chat: {
+    eyebrow: "Future Code",
+    title: "通用智能体",
+    subtitle: "嵌入完整 Future Code 工作台，保留会话、文件、终端、技能和事件能力。",
+  },
+  workers: {
+    eyebrow: "数字员工",
+    title: "数字员工",
+    subtitle: "配置数字员工的人设、技能、记忆和模型。",
+  },
   dashboard: {
     eyebrow: "Enterprise AI v2.4",
     title: "仪表盘",
     subtitle: "从一个入口进入通用智能体、业务智能体和企业能力市场。",
   },
   general: {
-    eyebrow: "FutureTech Console",
-    title: "通用 Agent",
+    eyebrow: "FutureTech 控制台",
+    title: "通用智能体",
     subtitle: "面向员工、实施和运维人员的通用智能体工作入口。",
   },
   marketplace: {
-    eyebrow: "Agent Marketplace",
-    title: "Agent 市场",
+    eyebrow: "智能体市场",
+    title: "智能体市场",
     subtitle: "从统一工作台选择、定制和运行不同场景智能体。",
   },
   skills: {
-    eyebrow: "Skill Marketplace",
+    eyebrow: "技能市场",
     title: "技能市场",
-    subtitle: "管理可复用 Skill，按场景组合成企业专属 Agent。",
+    subtitle: "管理可复用技能，按场景组合成企业专属智能体。",
   },
   custom: {
-    eyebrow: "Customization Center",
+    eyebrow: "定制中心",
     title: "定制中心",
-    subtitle: "通过模板、Skill、知识库和审批规则配置甲方专属智能体。",
+    subtitle: "通过模板、技能、知识库和审批规则配置甲方专属智能体。",
   },
   trace: {
-    eyebrow: "Run Trace",
+    eyebrow: "运行追踪",
     title: "运行追踪",
-    subtitle: "查看 Skill 调用、知识来源、人工确认点和结果文件。",
+    subtitle: "查看技能调用、知识来源、人工确认点和结果文件。",
   },
   settings: {
-    eyebrow: "Settings",
+    eyebrow: "平台设置",
     title: "设置",
     subtitle: "配置默认模型和平台展示信息。",
   },
@@ -119,15 +133,127 @@ const agentVisualOverrides = {
   "contract-extraction": { icon: FileText, color: "teal", shortName: "合同" },
 };
 
-function hydrateAgent(agent) {
-  const visual = agentVisualOverrides[agent.id] || {};
+const agentSlugTerms = {
+  academic: "学术",
+  accounts: "账款",
+  account: "客户",
+  ad: "广告",
+  addon: "插件",
+  advocate: "布道师",
+  ai: "AI",
+  analysis: "分析",
+  analyst: "分析师",
+  analytics: "分析",
+  architect: "架构师",
+  assistant: "助手",
+  auditor: "审计师",
+  automation: "自动化",
+  backend: "后端",
+  behavioral: "行为",
+  billing: "计费",
+  book: "图书",
+  brand: "品牌",
+  builder: "构建师",
+  campaign: "投放",
+  carousel: "轮播内容",
+  chief: "首席",
+  civil: "土木",
+  coach: "教练",
+  code: "代码",
+  compliance: "合规",
+  content: "内容",
+  controller: "管控",
+  creative: "创意",
+  customer: "客户",
+  data: "数据",
+  database: "数据库",
+  designer: "设计师",
+  developer: "开发工程师",
+  devops: "DevOps",
+  document: "文档",
+  ecommerce: "电商",
+  engineer: "工程师",
+  engineering: "工程",
+  executive: "高管",
+  extraction: "抽取",
+  finance: "财务",
+  frontend: "前端",
+  growth: "增长",
+  hr: "人事",
+  identity: "身份",
+  incident: "应急",
+  integration: "集成",
+  intelligence: "智能",
+  legal: "法务",
+  manager: "经理",
+  marketing: "营销",
+  media: "媒体",
+  mobile: "移动端",
+  onboarding: "入职",
+  operator: "运营",
+  optimization: "优化",
+  paid: "付费",
+  performance: "性能",
+  product: "产品",
+  project: "项目",
+  qa: "质检",
+  rapid: "快速",
+  recruiter: "招聘",
+  remediation: "修复",
+  research: "研究",
+  researcher: "研究员",
+  reviewer: "审查员",
+  sales: "销售",
+  security: "安全",
+  service: "服务",
+  social: "社媒",
+  software: "软件",
+  specialist: "专家",
+  strategist: "策略师",
+  strategy: "战略",
+  support: "支持",
+  systems: "系统",
+  technical: "技术",
+  testing: "测试",
+  tracker: "跟踪",
+  ux: "用户体验",
+  ui: "界面",
+  visual: "视觉",
+  workflow: "流程",
+  writer: "写作",
+};
+
+function localizeAgencyAgent(agent) {
+  if (!agent?.sourceFile) return agent;
+  const basename = agent.sourceFile.split("/").pop()?.replace(/\.md$/, "") || agent.id || agent.name || "agent";
+  const categoryPrefix = String(agent.sourceFile.split("/")[0] || "").replace(/-/g, " ");
+  const rawTokens = basename
+    .replace(new RegExp(`^${String(agent.sourceFile.split("/")[0] || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-`), "")
+    .split("-")
+    .filter(Boolean);
+  const tokens = rawTokens.map((token) => agentSlugTerms[token] || token);
+  const category = agent.category || agentSlugTerms[categoryPrefix] || "专业";
+  const name = tokens.join("") || agent.name || "专业助手";
+  const localizedName = name.includes(category) ? name : `${category}${name}`;
   return {
     ...agent,
+    name: localizedName,
+    shortName: localizedName.slice(0, 2),
+    description: `${localizedName}，可根据任务说明提供${category}场景的专业支持，并可包装为企业专属智能体。`,
+    vibe: "可定制为企业内部岗位能力。",
+  };
+}
+
+function hydrateAgent(agent) {
+  const localizedAgent = localizeAgencyAgent(agent);
+  const visual = agentVisualOverrides[agent.id] || {};
+  return {
+    ...localizedAgent,
     icon: visual.icon || agentIconMap[agent.id] || Bot,
     color: visual.color || agentColorMap[agent.id] || "blue",
-    shortName: agent.shortName || visual.shortName || agentShortNameMap[agent.id] || agent.name?.slice(0, 2) || "Agent",
-    inputs: agent.inputs || (agent.inputSchema || []).map((item) => item.label) || ["任务说明"],
-    outputs: agent.outputs || (agent.outputSchema || []).map((item) => item.label) || ["执行结果"],
+    shortName: localizedAgent.shortName || visual.shortName || agentShortNameMap[agent.id] || localizedAgent.name?.slice(0, 2) || "智能体",
+    inputs: localizedAgent.inputs || (localizedAgent.inputSchema || []).map((item) => item.label) || ["任务说明"],
+    outputs: localizedAgent.outputs || (localizedAgent.outputSchema || []).map((item) => item.label) || ["执行结果"],
   };
 }
 
@@ -184,11 +310,11 @@ function toRunView(run) {
 }
 
 function defaultTaskForAgent(agent) {
-  return `请以${agent.name}身份执行一次业务任务：先说明可用 Skill、需要的输入、执行计划和人工确认点；如果缺少业务文件，不要编造结果。`;
+  return `请以${agent.name}身份执行一次业务任务：先说明可用技能、需要的输入、执行计划和人工确认点；如果缺少业务文件，不要编造结果。`;
 }
 
 function App() {
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("chat");
   const [selectedAgentId, setSelectedAgentId] = useState("contract-extraction");
   const [run, setRun] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -200,8 +326,8 @@ function App() {
   const [builderSeedSkillId, setBuilderSeedSkillId] = useState("contract-e2e-excel");
 
   const agents = useMemo(() => {
-    const loadedAgents = platformState?.agents?.length ? platformState.agents : seedAgents;
-    return loadedAgents.map(hydrateAgent);
+    const platformAgents = platformState?.agents?.length ? platformState.agents : seedAgents;
+    return [...platformAgents, ...agencyAgentsHydrated].map(hydrateAgent);
   }, [platformState]);
 
   const selectedAgent = useMemo(
@@ -232,7 +358,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (view === "general") {
+    if (view === "chat" || view === "general") {
       openNativeConsole();
     }
   }, [view]);
@@ -430,24 +556,30 @@ function App() {
           </section>
         )}
 
+        {(view === "chat" || view === "general") && (
+          <GeneralAgent
+            consoleUrl={consoleUrl}
+            frameKey={consoleFrameKey}
+          />
+        )}
+
+        {view === "workers" && (
+          <WorkerDashboard
+            onOpenChat={() => setView("chat")}
+          />
+        )}
+
         {view === "dashboard" && (
           <Dashboard
             agents={agents}
             platformState={platformState}
             onStartRun={startRun}
-            onOpenGeneral={() => setView("general")}
+            onOpenGeneral={() => setView("chat")}
             onOpenMarketplace={() => setView("marketplace")}
             onOpenSkills={() => setView("skills")}
             onOpenCustom={openCustomWithSkill}
           />
         )}
-
-        {view === "general" && (
-        <GeneralAgent
-          consoleUrl={consoleUrl}
-          frameKey={consoleFrameKey}
-        />
-      )}
 
         {view === "marketplace" && (
           <AgentMarketplace
@@ -472,7 +604,7 @@ function App() {
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
             onStartRun={startRun}
-            onOpenGeneral={() => setView("general")}
+            onOpenGeneral={() => setView("chat")}
             onPlatformRefresh={refreshPlatformState}
             seedSkillId={builderSeedSkillId}
           />
@@ -549,7 +681,7 @@ function Dashboard({
         <PanelTitle icon={Sparkles} title="推荐入口" />
         <ScenarioShortcut
           icon={Bot}
-          title="通用 Agent"
+          title="通用智能体"
           text="自由对话、文档处理、临时任务。"
           onClick={onOpenGeneral}
         />
@@ -562,20 +694,20 @@ function Dashboard({
         <ScenarioShortcut
           icon={SlidersHorizontal}
           title="定制中心"
-          text="配置客户专属 Agent 和流程。"
+          text="配置客户专属智能体和流程。"
           onClick={onOpenCustom}
         />
       </aside>
 
       <div className="metric-card">
-        <PanelTitle icon={Bot} title="业务 Agent" />
+        <PanelTitle icon={Bot} title="业务智能体" />
         <strong>{runnableCount}</strong>
         <span>当前可用的业务入口</span>
       </div>
       <div className="metric-card">
         <PanelTitle icon={Puzzle} title="能力包" />
         <strong>{skillCount || "-"}</strong>
-        <span>按类别检索并可包装成 Agent</span>
+        <span>按类别检索并可包装成智能体</span>
       </div>
       <div className="metric-card">
         <PanelTitle icon={History} title="运行记录" />
@@ -586,7 +718,7 @@ function Dashboard({
       <div className="quick-deploy">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Workspace</p>
+            <p className="eyebrow">工作台</p>
             <h2>核心能力</h2>
           </div>
           <button className="text-button" type="button" onClick={onOpenMarketplace}>
@@ -606,12 +738,12 @@ function Dashboard({
             icon={Puzzle}
             title="技能市场"
             label="新版本"
-            text="把解析、写作、比对能力封装成可复用 Skill。"
+            text="把解析、写作、比对能力封装成可复用技能。"
             onClick={onOpenSkills}
           />
           <DeployCard
             icon={SlidersHorizontal}
-            title="定制 Agent"
+            title="定制智能体"
             label="自定义"
             text="面向客户部门配置专属入口、能力包和发布规则。"
             onClick={onOpenCustom}
@@ -629,7 +761,7 @@ function GeneralAgent({ consoleUrl, frameKey }) {
         <div className="console-toolbar">
           <div>
             <span className="tiny-chip">通用会话</span>
-            <h2>FutureTech 通用 Agent</h2>
+            <h2>Future Code 通用智能体</h2>
           </div>
           <div className="console-toolbar-actions">
             <a
@@ -645,7 +777,7 @@ function GeneralAgent({ consoleUrl, frameKey }) {
         </div>
         <iframe
           key={frameKey}
-          title="FutureTech Web Console"
+          title="Future Code 控制台"
           src={consoleUrl}
           className="console-frame"
         />
@@ -655,8 +787,8 @@ function GeneralAgent({ consoleUrl, frameKey }) {
 }
 
 function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, onCustomize }) {
-  const runnableAgents = agents.filter((agent) => agent.runnable !== false && agent.runner);
-  const selectedAgent = runnableAgents.find((agent) => agent.id === selectedAgentId) || runnableAgents[0];
+  const displayAgents = agents; // Show all agents including agency-agents imports
+  const selectedAgent = displayAgents.find((agent) => agent.id === selectedAgentId) || displayAgents[0];
   const [pdfFile, setPdfFile] = useState(null);
   const [message, setMessage] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -688,21 +820,21 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
       <div className="section-wide">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Agent Catalog</p>
-            <h2>业务 Agent</h2>
+            <p className="eyebrow">智能体目录</p>
+            <h2>业务智能体</h2>
           </div>
           <button className="ghost-button" type="button" onClick={onCustomize}>
             <SlidersHorizontal size={17} />
-            从 Skill 创建
+            从技能创建
           </button>
         </div>
 
         <div className="agent-grid">
-          {runnableAgents.map((agent) => {
+          {displayAgents.map((agent, index) => {
             const Icon = agent.icon;
             return (
               <article
-                key={agent.id}
+                key={`${agent.id}-${index}`}
                 className={`agent-card ${selectedAgent?.id === agent.id ? "selected" : ""}`}
                 onClick={() => onSelectAgent(agent.id)}
               >
@@ -712,12 +844,12 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
                 <div className="agent-card-main">
                   <div className="agent-title-row">
                     <h3>{agent.name}</h3>
-                    <span className="status-pill">{agent.status}</span>
+                    <span className="status-pill">{agent.category || agent.status}</span>
                   </div>
                   <p>{agent.description}</p>
                 </div>
                 <div className="agent-card-footer">
-                  <span>{agent.owner}</span>
+                  <span>{agent.vibe || agent.owner || ""}</span>
                   <button
                     className="ghost-button compact-button"
                     type="button"
@@ -746,11 +878,11 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
           })}
         </div>
 
-        {runnableAgents.length === 0 && (
+        {displayAgents.length === 0 && (
           <div className="empty-state">
             <Bot size={22} />
-            <strong>还没有可用 Agent</strong>
-            <span>请先在定制中心从 Skill 创建并发布 Agent。</span>
+            <strong>还没有可用智能体</strong>
+            <span>请先在定制中心从技能创建并发布智能体。</span>
           </div>
         )}
       </div>
@@ -784,7 +916,7 @@ function AgentMarketplace({ agents, selectedAgentId, onSelectAgent, onStartRun, 
             </button>
           </div>
         ) : (
-          <div className="empty-state compact">请先选择 Agent</div>
+          <div className="empty-state compact">请先选择智能体</div>
         )}
 
         {selectedAgent && (
@@ -860,17 +992,17 @@ function SkillMarketplace({ onOpenCustom }) {
       <div className="skills-main">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Skill Catalog</p>
+            <p className="eyebrow">技能目录</p>
             <h2>可复用能力包</h2>
           </div>
           <div className="trace-actions">
             <button className="ghost-button" type="button" onClick={onOpenCustom}>
               <Plus size={17} />
-              从 Skill 创建 Agent
+              从技能创建智能体
             </button>
             <button className="primary-button" type="button" onClick={() => onOpenCustom("contract-e2e-excel")}>
               <Sparkles size={17} />
-              创建合同提取 Agent
+              创建合同提取智能体
             </button>
           </div>
         </div>
@@ -890,7 +1022,7 @@ function SkillMarketplace({ onOpenCustom }) {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索 Skill 名称、描述、输入或输出"
+              placeholder="搜索技能名称、描述、输入或输出"
             />
           </div>
           <div className="category-filter">
@@ -911,7 +1043,7 @@ function SkillMarketplace({ onOpenCustom }) {
         {skillError && (
           <div className="empty-state compact">
             <AlertTriangle size={18} />
-            <span>读取 FutureTech Skill 失败：{skillError}</span>
+            <span>读取 FutureTech 技能失败：{skillError}</span>
           </div>
         )}
 
@@ -924,9 +1056,9 @@ function SkillMarketplace({ onOpenCustom }) {
         )}
 
         <div className="skill-market-grid real-skill-grid">
-          {visibleSkills.map((skill) => {
+          {visibleSkills.map((skill, index) => {
             return (
-              <article className="skill-card" key={skill.id}>
+              <article className="skill-card" key={`${skill.id}-${index}`}>
                 <div className="skill-card-head">
                   <div className="agent-icon blue">
                     <Puzzle size={20} />
@@ -963,7 +1095,7 @@ function SkillMarketplace({ onOpenCustom }) {
                 <div className="skill-card-footer">
                   <span>{skill.id}</span>
                   <button className="text-button" type="button" onClick={() => onOpenCustom(skill.id)}>
-                    生成 Agent
+                    生成智能体
                     <ArrowRight size={14} />
                   </button>
                 </div>
@@ -1021,6 +1153,10 @@ function CustomCenter({
   const [pdfFile, setPdfFile] = useState(null);
   const [runMessage, setRunMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const savedAgents = useMemo(() => {
+    const platformAgents = agents.filter((agent) => !agent.sourceFile);
+    return platformAgents.length ? platformAgents : agents.slice(0, 12);
+  }, [agents]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1063,7 +1199,7 @@ function CustomCenter({
   };
 
   const generateFromSkill = async (skillId = selectedSkillId) => {
-    setSaveMessage("正在从 Skill 生成 Agent 草案");
+    setSaveMessage("正在从技能生成智能体草案");
     try {
       const response = await fetch("/futuretech-admin/agent-blueprints/from-skill", {
         method: "POST",
@@ -1073,7 +1209,7 @@ function CustomCenter({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
       applyAgentDraft(data.agent);
-      setSaveMessage("已生成 Agent 草案，可以直接保存或展开高级配置。");
+      setSaveMessage("已生成智能体草案，可以直接保存或展开高级配置。");
     } catch (error) {
       setSaveMessage(error.message || "生成失败");
     }
@@ -1136,7 +1272,7 @@ function CustomCenter({
   };
 
   const saveAgentConfig = async () => {
-    setSaveMessage("正在保存 Agent 蓝图");
+    setSaveMessage("正在保存智能体蓝图");
     try {
       const agent = buildAgentPayload();
       const response = await fetch("/futuretech-admin/agents", {
@@ -1146,7 +1282,7 @@ function CustomCenter({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-      setSaveMessage("Agent 蓝图已保存，Agent 市场会使用这份配置。");
+      setSaveMessage("智能体蓝图已保存，智能体市场会使用这份配置。");
       onSelectAgent(data.agent.id);
       onPlatformRefresh?.();
       return data.agent;
@@ -1180,10 +1316,10 @@ function CustomCenter({
   return (
     <section className="custom-layout">
       <div className="custom-main">
-        <div className="section-heading">
+        <div className="section-heading custom-heading">
           <div>
-            <p className="eyebrow">Agent Builder</p>
-            <h2>Agent 定制中心</h2>
+            <p className="eyebrow">智能体构建器</p>
+            <h2>智能体定制中心</h2>
           </div>
           <div className="trace-actions">
             <button className="ghost-button" type="button" onClick={onOpenGeneral}>
@@ -1192,7 +1328,7 @@ function CustomCenter({
             </button>
             <button className="ghost-button" type="button" onClick={saveAgentConfig}>
               <Upload size={17} />
-              保存 Agent
+              保存智能体
             </button>
             <button className="primary-button" type="button" onClick={testRun}>
               <Play size={17} />
@@ -1202,7 +1338,7 @@ function CustomCenter({
         </div>
 
         <div className="builder-steps" aria-label="定制步骤">
-          <BuilderStep index="1" title="选择 Skill" text="系统自动生成 Agent 草案。" active />
+          <BuilderStep index="1" title="选择技能" text="系统自动生成智能体草案。" active />
           <BuilderStep index="2" title="填写目标" text="普通用户只填输入、输出和职责。" active />
           <BuilderStep index="3" title="高级蓝图" text="保留流程、权限和校验自由度。" active />
         </div>
@@ -1210,7 +1346,7 @@ function CustomCenter({
         <div className="builder-panel simple-builder-panel">
           <div className="builder-form">
             <label className="wide-field">
-              选择 Skill
+              选择技能
               <select value={selectedSkillId} onChange={(event) => setSelectedSkillId(event.target.value)}>
                 {skills.map((skill) => (
                   <option key={skill.id} value={skill.id}>
@@ -1220,7 +1356,7 @@ function CustomCenter({
               </select>
             </label>
             <label>
-              Agent 名称
+              智能体名称
               <input value={simpleForm.name} onChange={(event) => updateSimpleForm("name", event.target.value)} />
             </label>
             <label>
@@ -1242,7 +1378,7 @@ function CustomCenter({
               />
             </label>
             <label className="wide-field">
-              Agent 身份
+              智能体身份
               <textarea value={simpleForm.rolePrompt} onChange={(event) => updateSimpleForm("rolePrompt", event.target.value)} />
             </label>
             <label>
@@ -1254,7 +1390,7 @@ function CustomCenter({
               <textarea value={simpleForm.outputsText} onChange={(event) => updateSimpleForm("outputsText", event.target.value)} />
             </label>
             <label className="wide-field">
-              绑定 Skill
+              绑定技能
               <input value={simpleForm.skillsText} onChange={(event) => updateSimpleForm("skillsText", event.target.value)} />
             </label>
             {saveMessage && <div className="form-message">{saveMessage}</div>}
@@ -1287,13 +1423,13 @@ function CustomCenter({
       </div>
 
       <aside className="right-rail">
-        <PanelTitle icon={Store} title="已保存 Agent" />
+        <PanelTitle icon={Store} title="已保存智能体" />
         <div className="agent-switcher">
-          {agents.map((agent) => {
+          {savedAgents.map((agent, index) => {
             const Icon = agent.icon;
             return (
               <button
-                key={agent.id}
+                key={`${agent.id}-${index}`}
                 className={selectedAgentId === agent.id ? "active" : ""}
                 type="button"
                 onClick={() => onSelectAgent(agent.id)}
@@ -1307,7 +1443,7 @@ function CustomCenter({
 
         <PanelTitle icon={FileText} title="当前配置摘要" />
         <div className="summary-stack">
-          <SummaryLine label="Skill" value={selectedSkillId || "-"} />
+          <SummaryLine label="技能" value={selectedSkillId || "-"} />
           <SummaryLine label="输入" value={simpleForm.inputsText || "-"} />
           <SummaryLine label="输出" value={simpleForm.outputsText || "-"} />
           <SummaryLine label="市场" value={simpleForm.marketplace ? "发布" : "草案"} />
@@ -1335,7 +1471,7 @@ function TraceView({ run, progress, activeRunStep, onStartRun, platformError }) 
       <div className="trace-main">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Run Trace</p>
+            <p className="eyebrow">运行追踪</p>
             <h2>执行过程可追踪</h2>
           </div>
           <div className="trace-actions">
@@ -1353,7 +1489,7 @@ function TraceView({ run, progress, activeRunStep, onStartRun, platformError }) 
         <div className="run-summary">
           <div>
             <span className="summary-label">当前任务</span>
-            <strong>{run ? `${run.agentName || "Agent"} / 任务记录` : "等待启动任务"}</strong>
+            <strong>{run ? `${run.agentName || "智能体"} / 任务记录` : "等待启动任务"}</strong>
           </div>
           <div>
             <span className="summary-label">当前步骤</span>
@@ -1390,7 +1526,7 @@ function TraceView({ run, progress, activeRunStep, onStartRun, platformError }) 
                     </span>
                     <span>
                       <Database size={14} />
-                      {step.source || "AgentOS run state"}
+                      {step.source || "AgentOS 运行状态"}
                     </span>
                   </div>
                 </div>
@@ -1476,8 +1612,8 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
   const [settingsMessage, setSettingsMessage] = useState("");
   const tabs = [
     { id: "model", label: "模型" },
-    { id: "runtime", label: "Runtime" },
-    { id: "security", label: "Security" },
+    { id: "runtime", label: "运行时" },
+    { id: "security", label: "安全" },
     { id: "brand", label: "平台信息" },
   ];
   const visibleTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : "model";
@@ -1611,7 +1747,7 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
     <section className="base-layout">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">System Settings</p>
+          <p className="eyebrow">系统设置</p>
           <h2>平台设置</h2>
         </div>
       </div>
@@ -1635,15 +1771,15 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
             <Server size={22} />
             <div>
               <h3>FutureTech Runtime</h3>
-              <p>完整 Console 反向代理已启用，保留会话、文件、终端、Skill、MCP 和事件流能力。</p>
+              <p>完整控制台反向代理已启用，保留会话、文件、终端、技能、MCP 和事件流能力。</p>
             </div>
             <span>{runtimeStatus?.healthy ? "在线" : "离线"}</span>
           </div>
           <div className="model-card">
             <PlugZap size={22} />
             <div>
-              <h3>Skill 调度</h3>
-              <p>从 FutureTech Runtime 读取 Skill registry，并在 Agent 运行时写入 Skill 上下文。</p>
+              <h3>技能调度</h3>
+              <p>从 FutureTech Runtime 读取技能目录，并在智能体运行时写入技能上下文。</p>
             </div>
             <span>{runtimeStatus ? `${runtimeStatus.skillCount} 个` : "-"}</span>
           </div>
@@ -1706,7 +1842,7 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
               <input
                 value={modelQuery}
                 onChange={(event) => setModelQuery(event.target.value)}
-                placeholder="搜索模型、Provider、系列"
+                placeholder="搜索模型、服务商、系列"
               />
             </div>
             <label>
@@ -1718,9 +1854,9 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
               </select>
             </label>
             <label>
-              Provider
+              服务商
               <select value={modelProvider} onChange={(event) => setModelProvider(event.target.value)}>
-                <option value="all">全部 Provider</option>
+                <option value="all">全部服务商</option>
                 {providerChoices.map((provider) => (
                   <option key={provider.id} value={provider.id}>
                     {provider.name}（{provider.modelCount}）
@@ -1734,14 +1870,14 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
             <div className="contract-box">
               <PanelTitle icon={Cpu} title="当前模型" />
               <SummaryLine label="模型" value={currentProfile?.displayModelName || modelState?.activeModel || "-"} />
-              <SummaryLine label="Provider" value={currentProfile?.providerName || "-"} />
+              <SummaryLine label="服务商" value={currentProfile?.providerName || "-"} />
               <SummaryLine label="状态" value={currentProfile?.connected ? "可切换" : "需检查"} />
             </div>
             <div className="contract-box">
               <PanelTitle icon={Network} title="模型目录" />
-              <SummaryLine label="Provider" value={`${modelState?.providerCount ?? 0} 个`} />
+              <SummaryLine label="服务商" value={`${modelState?.providerCount ?? 0} 个`} />
               <SummaryLine label="模型" value={`${modelState?.modelCount ?? 0} 个`} />
-              <SummaryLine label="可切换 Provider" value={`${modelState?.connectedProviderCount ?? 0} 个`} />
+              <SummaryLine label="可切换服务商" value={`${modelState?.connectedProviderCount ?? 0} 个`} />
             </div>
             <div className="contract-box">
               <PanelTitle icon={ShieldCheck} title="配置写回" />
@@ -1770,8 +1906,8 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
                 <div className="model-meta-grid">
                   <span>{profile.providerName}</span>
                   <span>{profile.family || "通用"}</span>
-                  <span>{profile.limit?.context ? `${profile.limit.context.toLocaleString()} ctx` : "context -"}</span>
-                  <span>{profile.status || "catalog"}</span>
+                  <span>{profile.limit?.context ? `${profile.limit.context.toLocaleString()} ctx` : "上下文 -"}</span>
+                  <span>{profile.status || "目录"}</span>
                 </div>
                 <div className="model-capability-list">
                   {profile.capabilities?.reasoning && <span>推理</span>}
@@ -1840,7 +1976,7 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
             <ShieldCheck size={22} />
             <div>
               <h3>运行模式</h3>
-              <p>业务 Agent 默认运行策略：{securityPolicy?.defaultRunMode || "-"}。</p>
+              <p>业务智能体默认运行策略：{securityPolicy?.defaultRunMode || "-"}。</p>
             </div>
             <button className="ghost-button" type="button" onClick={toggleRunMode}>
               切换
@@ -1849,8 +1985,8 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
           <div className="model-card">
             <LockKeyhole size={22} />
             <div>
-              <h3>Console 能力</h3>
-              <p>通用入口保留完整 Runtime 能力，业务 Agent 通过策略限制 Skill 和产物边界。</p>
+              <h3>控制台能力</h3>
+              <p>通用入口保留完整 Runtime 能力，业务智能体通过策略限制技能和产物边界。</p>
             </div>
             <span>{securityPolicy?.runtimeConsole || "full-access"}</span>
           </div>
@@ -1905,7 +2041,7 @@ function SettingsPage({ activeTab, onTabChange, platformState, onPlatformRefresh
           <div className="contract-box">
             <PanelTitle icon={SlidersHorizontal} title="展示字段" />
             <SummaryLine label="平台名称" value="AgentOS" />
-            <SummaryLine label="通用入口" value="FutureTech 通用 Agent" />
+            <SummaryLine label="通用入口" value="Future Code 通用智能体" />
             <SummaryLine label="服务形态" value="企业专属部署" />
           </div>
           <div className="kb-grid settings-wide">
